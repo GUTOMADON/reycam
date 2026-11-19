@@ -1,0 +1,15 @@
+node_modules/
+__pycache__/
+.pytest_cache/
+*.pyc
+server/reycam.db
+*.db
+.env
+.env.*
+web/tests/out/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+*.zip
