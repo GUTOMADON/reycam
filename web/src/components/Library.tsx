@@ -4,13 +4,13 @@ import type { Strings } from '../i18n';
 import { lookDesc } from '../i18n';
 
 export const CAT_KEY: Record<string, string> = {
-  all: 'catAll', fav: 'catFav', film: 'catFilm', sim: 'catSims', y2k: 'catY2k', flash: 'catFlash', indie: 'catIndie', lowlight: 'catLowlight',
+  all: 'catAll', fav: 'catFav', moody: 'catMoody', bw: 'catBw', film: 'catFilm', sim: 'catSims', y2k: 'catY2k', flash: 'catFlash', indie: 'catIndie', lowlight: 'catLowlight',
   nature: 'catNature', yellow: 'catYellow', green: 'catGreen', wine: 'catWine', color: 'catColors', video: 'catVideo', extra: 'catExtras', mine: 'catMine'
 };
 
 /** Accent dot shown next to each category. */
 const CAT_DOT: Record<string, string> = {
-  all: '#f4dce2', fav: '#ff4d6d', film: '#e8a35c', indie: '#ff7a59', y2k: '#7cc4ff', flash: '#fff3b0', sim: '#c9b8a6', yellow: '#ffd23d',
+  all: '#f4dce2', fav: '#ff4d6d', moody: '#3f8f86', bw: '#d9d9d9', film: '#e8a35c', indie: '#ff7a59', y2k: '#7cc4ff', flash: '#fff3b0', sim: '#c9b8a6', yellow: '#ffd23d',
   green: '#4fd16b', wine: '#9e2a4a', lowlight: '#6b6bff', nature: '#8fbf6a', color: '#d58bff', video: '#ff5c5c', extra: '#5ce1e6', mine: '#f08b8f'
 };
 
@@ -36,12 +36,27 @@ interface CardProps {
   onPick: (id: string) => void;
   onFav: (id: string) => void;
   onDelete: (id: string) => void;
+  onVisible: (id: string) => void;
 }
 
-const LookCard = memo(function LookCard({ r, thumb, selected, fav, catLabel, desc, favLabel, delLabel, onPick, onFav, onDelete }: CardProps) {
+const LookCard = memo(function LookCard({ r, thumb, selected, fav, catLabel, desc, favLabel, delLabel, onPick, onFav, onDelete, onVisible }: CardProps) {
   const mine = r.cat === 'mine';
+  const cardRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el || thumb || mine) return;
+    if (!('IntersectionObserver' in window)) { onVisible(r.id); return; }
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        onVisible(r.id);
+        observer.disconnect();
+      }
+    }, { rootMargin: '160px 0px', threshold: 0.01 });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [r.id, thumb, mine, onVisible]);
   return (
-    <div className={selected ? 'look on' : 'look'} data-look={r.id}>
+    <div ref={cardRef} className={selected ? 'look on' : 'look'} data-look={r.id}>
       <button type="button" className="look-btn" onClick={() => onPick(r.id)} aria-pressed={selected} title={desc}>
         <span className="look-img">
           {thumb ? <img src={thumb} alt="" decoding="async" /> : <span className="thumb-ph" />}
@@ -77,6 +92,7 @@ interface LibraryProps {
   onPick: (id: string) => void;
   onFav: (id: string) => void;
   onDelete: (id: string) => void;
+  onVisible: (id: string) => void;
 }
 
 export const Library = memo(function Library(p: LibraryProps) {
@@ -149,6 +165,7 @@ export const Library = memo(function Library(p: LibraryProps) {
             onPick={p.onPick}
             onFav={p.onFav}
             onDelete={p.onDelete}
+            onVisible={p.onVisible}
           />
         ))}
       </div>

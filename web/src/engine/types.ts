@@ -1,7 +1,7 @@
 export type RGB = [number, number, number];
 
 export type Category =
-  | 'film' | 'sim' | 'y2k' | 'flash' | 'indie' | 'lowlight' | 'nature' | 'yellow' | 'green' | 'wine' | 'color' | 'video' | 'extra' | 'mine';
+  | 'moody' | 'bw' | 'film' | 'sim' | 'y2k' | 'flash' | 'indie' | 'lowlight' | 'nature' | 'yellow' | 'green' | 'wine' | 'color' | 'video' | 'extra' | 'mine';
 
 export type FrameId = 'auto' | 'none' | 'border' | 'instant' | 'square' | 'film' | 'slide' | 'half' | '8mm' | 'cinema';
 export type StampStyle = 'date' | 'vhs' | 'dcr' | 'cctv' | null;

@@ -13,3 +13,9 @@ web/tests/out/
 Thumbs.db
 *.log
 *.zip
+# Local HTTPS certificates for iPhone testing (private keys, never commit)
+web/.cert/
+.cert/
+# Vercel and Netlify CLI link folders
+.vercel/
+.netlify/

@@ -48,6 +48,7 @@ export default function App() {
   const [tab, setTab] = useState('looks');
   const [band, setBand] = useState('red');
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
+  const [visibleThumbIds, setVisibleThumbIds] = useState<Set<string>>(new Set());
   const [comparing, setComparing] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(true);
@@ -218,8 +219,12 @@ export default function App() {
     let cancelled = false;
     const list: { id: string; r: Recipe; e: EditState }[] = [];
     const base = { ...defaultEdit(), adj: zeroAdj(), aspect: '1:1', frame: 'none' as const, stamp: 'off' as const };
-    RECIPES.forEach((r) => list.push({ id: r.id, r, e: { ...base, camId: r.id } }));
-    presets.forEach((p) => list.push({ id: 'preset:' + p.id, r: findRecipe(p.edit.camId), e: { ...p.edit, aspect: '1:1', frame: 'none', stamp: 'off' } }));
+    RECIPES.forEach((r) => {
+      if (visibleThumbIds.has(r.id)) list.push({ id: r.id, r, e: { ...base, camId: r.id } });
+    });
+    presets.forEach((p) => {
+      if (visibleThumbIds.has('preset:' + p.id)) list.push({ id: 'preset:' + p.id, r: findRecipe(p.edit.camId), e: { ...p.edit, aspect: '1:1', frame: 'none', stamp: 'off' } });
+    });
     const c = document.createElement('canvas');
     const acc: Record<string, string> = {};
     let i = 0;
@@ -238,7 +243,7 @@ export default function App() {
     };
     const id = window.setTimeout(step, 60);
     return () => { cancelled = true; window.clearTimeout(id); };
-  }, [media, presets, renderTo]);
+  }, [media, presets, renderTo, visibleThumbIds]);
 
   // Edits with undo history
   const commit = useCallback((next: EditState) => {
@@ -618,6 +623,7 @@ export default function App() {
       cat={cat} setCat={setCat} query={query} setQuery={setQuery}
       looks={looks} thumbs={thumbs} selectedId={edit.camId} favs={favs}
       onPick={pickLook} onFav={toggleFav} onDelete={deletePreset}
+      onVisible={(id) => setVisibleThumbIds((current) => current.has(id) ? current : new Set([...current, id]))}
     />
   );
 

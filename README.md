@@ -6,7 +6,7 @@
 
 **Vintage cameras, film looks and pro edits for photos and videos, right in the browser.**
 
-130 looks · GPU rendering with WebGL2 · Full resolution export · MP4 video with sound · Installable PWA · 6 languages
+625 looks · 16 categories · GPU rendering with WebGL2 · Full resolution export · MP4 video with sound · Installable PWA · 6 languages
 
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
@@ -40,7 +40,7 @@
 ## Highlights
 
 - **On device and private.** Every pixel is processed on the GPU of the user's device. Photos and videos are never uploaded.
-- **130 looks** across film, Y2K, indie, flash, film simulations, low light, nature, yellow, green, wine and more. Each look has an intensity slider, and at 0% it matches the original.
+- **625 looks in 16 categories** (every category has at least 39, Y2K has 50), including the new **Moody** category led by **Mirror Mood** (dark cinematic teal shadows with warm natural skin, fitted to a reference photo) and a **Black and White** category. Looks span film, Y2K, indie, flash, film simulations, low light, nature, yellow, green, wine and more. Each look has an intensity slider, and at 0% it matches the original.
 - **Pro adjustments.** Light, parametric tone curve, color, 8 band HSL mixer, three way color grading, clarity, dehaze, sharpen, grain, bloom, light leaks, dust, chromatic shift, scanlines, glitch and lo fi pixels.
 - **Camera details.** 10 frames (instant, film strip, slide mount, half frame, 8mm, cinema bars), date stamp in 4 formats and 5 colors, VHS, camcorder and CCTV overlays, double exposure.
 - **"No date" everywhere.** A one tap option, plus a remembered setting for people who never want a date, even on looks that ship with one.
@@ -166,6 +166,27 @@ npm run build      # checks translations, type checks and writes web/dist
 ### Install on a phone
 
 Phones need HTTPS for the gallery picker and file export (localhost is exempt on computers). Deploy the server behind HTTPS, or test with a tunnel such as `cloudflared tunnel --url http://localhost:8000`, then use **Add to Home Screen** (iOS Safari) or **Install app** (Android Chrome).
+
+## Look lab
+
+`web/tests/lab/run.mjs` renders looks with the real pipeline in Chromium:
+
+```bash
+npm run lab:counts
+```
+Shows how many looks each category has.
+
+```bash
+npm run test:looks
+```
+Fails when two looks have almost identical thumbnails.
+
+```bash
+npm run lab:mirror
+```
+Shows how close each Moody look is to the Mirror Mood reference (mean delta E per pixel).
+
+HEIC photos open in every browser: Safari decodes them natively and other browsers load `heic-to` (LGPL-3.0) on demand.
 
 ## Testing
 

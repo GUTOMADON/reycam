@@ -1,4 +1,23 @@
 import type { Recipe } from './types';
+import { MOODY_LOOKS } from './recipes-moody';
+import { BW_LOOKS } from './recipes-bw';
+import { FILM_LOOKS } from './recipes-film';
+import { INDIE_LOOKS } from './recipes-indie';
+import { Y2K_LOOKS } from './recipes-y2k';
+import { FLASH_LOOKS } from './recipes-flash';
+import { SIM_LOOKS } from './recipes-sim';
+import { YELLOW_LOOKS } from './recipes-yellow';
+import { GREEN_LOOKS } from './recipes-green';
+import { WINE_LOOKS } from './recipes-wine';
+import { LOWLIGHT_LOOKS } from './recipes-lowlight';
+import { NATURE_LOOKS } from './recipes-nature';
+import { COLOR_LOOKS } from './recipes-color';
+import { VIDEO_LOOKS } from './recipes-video';
+import { EXTRA_LOOKS } from './recipes-extra';
+import {
+  Y2K_EXTRA, FLASH_EXTRA, INDIE_EXTRA, SIM_EXTRA, YELLOW_EXTRA, GREEN_EXTRA,
+  WINE_EXTRA, LOWLIGHT_EXTRA, NATURE_EXTRA, COLOR_EXTRA, VIDEO_EXTRA, EXTRA_EXTRA
+} from './recipes-expanded';
 
 /**
  * Camera recipes. Every number uses the same scale as the user sliders
@@ -26,7 +45,7 @@ export const RECIPES: Recipe[] = [
   { id: 'slide-64', name: 'Slide 64', cat: 'film', desc: 'Saturated slide in a plastic mount', frame: 'slide', saturation: 34, contrast: 22, vignette: 30, temperature: 4, fade: 6 },
   { id: 'toy-lomo', name: 'Toy Lomo', cat: 'film', desc: 'Plastic lens, cross processed', vignette: 90, saturation: 40, contrast: 30, lift: [0, 0.04, 0.12], gain: [1, 1, 0.82], grain: 20, softness: 10 },
   { id: 'cross-pro', name: 'Cross Pro', cat: 'film', desc: 'Cross processed slide, yellow and cyan', contrast: 28, saturation: 26, lift: [0.02, 0.05, 0.16], gain: [1, 1, 0.75], hsl: { blue: [-20, 10, 0] } },
-  { id: 'mono-strike', name: 'Mono Strike', cat: 'film', desc: 'Hard black and white, deep grain', mono: true, contrast: 38, grain: 50, vignette: 30, stampColor: '#f2f2f2' },
+  { id: 'mono-strike', name: 'Mono Strike', cat: 'bw', desc: 'Hard black and white, deep grain', mono: true, contrast: 38, grain: 50, vignette: 30, stampColor: '#f2f2f2' },
   { id: 'medium-120', name: 'Medium 120', cat: 'film', desc: 'Medium format, fine grain, white border', frame: 'border', fade: 12, grain: 12, saturation: 6, temperature: 6, softness: 6, contrast: 6 },
   { id: 'dispo-27', name: 'Dispo 27', cat: 'film', desc: 'Disposable with harsh flash', exposure: 12, bloom: 18, temperature: 20, saturation: 16, fade: 16, grain: 34, vignette: 36, leak: 20, stamp: 'date' },
   { id: 'sepia-old', name: 'Sepia Old', cat: 'film', desc: 'Old print, sepia and dust', sepia: true, fade: 30, grain: 40, vignette: 50, dust: 50, contrast: 10, stampColor: '#ffcf8a' },
@@ -40,7 +59,7 @@ export const RECIPES: Recipe[] = [
   { id: 'amber-neg', name: 'Amber Neg', cat: 'sim', desc: 'Amber highlights, rich printed shadows', blacks: -12, saturation: 10, contrast: 10, temperature: 12, grade: { hi: [38, 48], sh: [200, 12] } },
   { id: 'cine-soft', name: 'Cine Soft', cat: 'sim', desc: 'Low contrast motion picture tone', contrast: -20, saturation: -22, fade: 12, shadows: 10, grade: { sh: [185, 20] } },
   { id: 'bleach', name: 'Bleach', cat: 'sim', desc: 'Bleach bypass, silver and gritty', saturation: -55, contrast: 38, clarity: 25, highlights: -10 },
-  { id: 'fine-mono', name: 'Fine Mono', cat: 'sim', desc: 'Smooth black and white, fine grain', mono: true, contrast: 16, grain: 18, clarity: 15, stampColor: '#f2f2f2' },
+  { id: 'fine-mono', name: 'Fine Mono', cat: 'bw', desc: 'Smooth black and white, fine grain', mono: true, contrast: 16, grain: 18, clarity: 15, stampColor: '#f2f2f2' },
   { id: 'true-color', name: 'True Color', cat: 'sim', desc: 'Faithful color, crisp tonality', contrast: 14, saturation: 4, clarity: 6 },
 
   // Y2K and digicam
@@ -56,7 +75,7 @@ export const RECIPES: Recipe[] = [
   { id: 'paparazzi', name: 'Paparazzi', cat: 'flash', desc: 'Red carpet flash with heavy glow', exposure: 10, highlights: 30, contrast: 34, blacks: -30, vignette: 70, bloom: 45, saturation: -10, grain: 18 },
   { id: 'party-flash', name: 'Party Flash', cat: 'flash', desc: 'Warm house party flash with date', exposure: 14, contrast: 22, temperature: 16, vignette: 55, bloom: 20, grain: 28, stamp: 'date' },
   { id: 'red-flash', name: 'Red Flash', cat: 'flash', desc: 'Flash with red gel', exposure: 8, contrast: 24, vignette: 50, grade: { mid: [355, 40], sh: [340, 30] }, bloom: 20 },
-  { id: 'mono-flash', name: 'Mono Flash', cat: 'flash', desc: 'Black and white flash snapshot', mono: true, exposure: 10, contrast: 40, highlights: 20, vignette: 60, grain: 34 },
+  { id: 'mono-flash', name: 'Mono Flash', cat: 'bw', desc: 'Black and white flash snapshot', mono: true, exposure: 10, contrast: 40, highlights: 20, vignette: 60, grain: 34 },
   { id: 'blurry-candid', name: 'Blurry Candid', cat: 'flash', desc: 'Soft focus candid, flash and grain', softness: 40, exposure: 8, bloom: 30, grain: 30, contrast: 12, vignette: 30, temperature: 6 },
 
   // Indie
@@ -98,7 +117,7 @@ export const RECIPES: Recipe[] = [
   { id: 'super-8', name: 'Super 8', cat: 'video', desc: 'Gate weave, flicker, rounded gate', weave: true, flicker: 50, frame: '8mm', temperature: 22, fade: 30, grain: 55, dust: 50, vignette: 45, saturation: 10, leak: 25 },
   { id: 'cine-16', name: 'Cine 16', cat: 'video', desc: 'Documentary 16mm texture', grain: 40, temperature: 8, fade: 16, contrast: 14, flicker: 20, dust: 20, vignette: 25, weave: true },
   { id: 'dcr-cam', name: 'DCR Cam', cat: 'video', desc: 'Digital camcorder with REC overlay', stamp: 'dcr', sharpen: 30, saturation: 10, temperature: -6, scanlines: 15, chroma: 10, grain: 12 },
-  { id: 'kino-mono', name: 'Kino Mono', cat: 'video', desc: 'Silent era black and white reel', mono: true, contrast: 30, flicker: 60, dust: 80, grain: 60, vignette: 55, weave: true, frame: '8mm' },
+  { id: 'kino-mono', name: 'Kino Mono', cat: 'bw', desc: 'Silent era black and white reel', mono: true, contrast: 30, flicker: 60, dust: 80, grain: 60, vignette: 55, weave: true, frame: '8mm' },
 
   // Extras
   { id: 'fisheye-zap', name: 'Fisheye', cat: 'extra', desc: 'Round lens, skate video energy', fisheye: 100, vignette: 70, saturation: 12, contrast: 14, chroma: 20 },
@@ -106,7 +125,7 @@ export const RECIPES: Recipe[] = [
   { id: 'shift-3d', name: 'Shift 3D', cat: 'extra', desc: 'Red and cyan anaglyph offset', anaglyph: 100, contrast: 10, saturation: -10 },
   { id: 'night-vision', name: 'Night Vision', cat: 'extra', desc: 'Green night vision bloom', exposure: 10, bloom: 60, temperature: -20, tint: -26, grain: 50, saturation: -30, shadowTint: [20, 90, 40], split: 0.3 },
   { id: 'cine-gold', name: 'Cine Gold', cat: 'extra', desc: 'Teal and orange widescreen grade', shadowTint: [0, 110, 130], hiTint: [255, 170, 90], split: 0.28, contrast: 16, saturation: 6, frame: 'cinema' },
-  { id: 'film-noir', name: 'Film Noir', cat: 'extra', desc: 'High contrast black and white cinema', mono: true, contrast: 46, blacks: -24, vignette: 50, grain: 22, frame: 'cinema' },
+  { id: 'film-noir', name: 'Film Noir', cat: 'bw', desc: 'High contrast black and white cinema', mono: true, contrast: 46, blacks: -24, vignette: 50, grain: 22, frame: 'cinema' },
   { id: 'glitch-wave', name: 'Glitch Wave', cat: 'extra', desc: 'Datamosh slices and RGB split', glitch: 90, chroma: 70, scanlines: 30, saturation: 30 },
   { id: 'cctv-01', name: 'CCTV 01', cat: 'extra', desc: 'Security cam, green mono', mono: true, shadowTint: [0, 70, 20], hiTint: [170, 255, 190], split: 0.5, grain: 40, scanlines: 40, stamp: 'cctv', fisheye: 40, sharpen: 20, contrast: 10 },
   { id: 'dream-pop', name: 'Dream Pop', cat: 'extra', desc: 'Soft glow, pastel daydream', bloom: 70, fade: 30, saturation: 20, softness: 14, temperature: 10, tint: 18, leak: 30 },
@@ -140,7 +159,7 @@ export const RECIPES: Recipe[] = [
   { id: 'classic-u', name: 'Classic U', cat: 'film', desc: 'Cool classic, deep blues and soft skin', temperature: -14, saturation: 6, contrast: 14, fade: 14, grain: 18, grade: { sh: [215, 22], hi: [40, 10] } },
   { id: 'pola-i', name: 'Pola I', cat: 'film', desc: 'Cool faded instant print with frame', frame: 'instant', fade: 32, temperature: -10, contrast: -6, saturation: -10, grade: { sh: [190, 24] }, vignette: 16 },
   { id: 'inst-mini', name: 'Inst Mini', cat: 'film', desc: 'Warm mini instant with soft flash', frame: 'instant', exposure: 12, fade: 24, temperature: 14, saturation: 6, bloom: 26, contrast: -4 },
-  { id: 'mono-400', name: 'Mono 400', cat: 'film', desc: 'Classic black and white, bold grain and rich blacks', mono: true, contrast: 30, blacks: -14, grain: 42, clarity: 12, vignette: 22, stampColor: '#f2f2f2' },
+  { id: 'mono-400', name: 'Mono 400', cat: 'bw', desc: 'Classic black and white, bold grain and rich blacks', mono: true, contrast: 30, blacks: -14, grain: 42, clarity: 12, vignette: 22, stampColor: '#f2f2f2' },
   { id: 'ccd-2003', name: 'CCD 2003', cat: 'y2k', desc: 'Pocket digicam, flash and blown highlights', exposure: 18, highlights: 24, whites: 28, sharpen: 52, temperature: -14, saturation: 12, contrast: 16, bloom: 18, grain: 14, stamp: 'date', stampColor: '#ffb000' },
 
   // Yellow
@@ -168,6 +187,16 @@ export const RECIPES: Recipe[] = [
   { id: 'veludo', name: 'Velvet', cat: 'wine', desc: 'Velvety wine with a soft glow', contrast: 12, saturation: 6, bloom: 30, bloomTint: [255, 140, 170], softness: 6, grade: { sh: [338, 34], mid: [345, 16] }, vignette: 28 },
 ];
 
+// Extra looks live in one file per category (recipes-<category>.ts).
+RECIPES.push(
+  ...MOODY_LOOKS, ...BW_LOOKS, ...FILM_LOOKS, ...INDIE_LOOKS, ...Y2K_LOOKS,
+  ...FLASH_LOOKS, ...SIM_LOOKS, ...YELLOW_LOOKS, ...GREEN_LOOKS, ...WINE_LOOKS,
+  ...LOWLIGHT_LOOKS, ...NATURE_LOOKS, ...COLOR_LOOKS, ...VIDEO_LOOKS, ...EXTRA_LOOKS,
+  ...Y2K_EXTRA, ...FLASH_EXTRA, ...INDIE_EXTRA, ...SIM_EXTRA, ...YELLOW_EXTRA,
+  ...GREEN_EXTRA, ...WINE_EXTRA, ...LOWLIGHT_EXTRA, ...NATURE_EXTRA, ...COLOR_EXTRA,
+  ...VIDEO_EXTRA, ...EXTRA_EXTRA
+);
+
 RECIPES.forEach((r, i) => {
   r.seed = i * 97 + 13;
   if (r.hsl) {
@@ -185,7 +214,7 @@ RECIPES.forEach((r, i) => {
   }
 });
 
-export const CATEGORIES = ['all', 'fav', 'film', 'indie', 'y2k', 'flash', 'sim', 'yellow', 'green', 'wine', 'lowlight', 'nature', 'color', 'video', 'extra', 'mine'] as const;
+export const CATEGORIES = ['all', 'fav', 'moody', 'bw', 'film', 'indie', 'y2k', 'flash', 'sim', 'yellow', 'green', 'wine', 'lowlight', 'nature', 'color', 'video', 'extra', 'mine'] as const;
 
 export function findRecipe(id: string, custom: Recipe[] = []): Recipe {
   return RECIPES.find((r) => r.id === id) || custom.find((r) => r.id === id) || RECIPES[0];
