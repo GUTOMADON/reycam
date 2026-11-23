@@ -47,5 +47,5 @@
   "storageKept": "This device keeps your presets safe.", "storageMayClear": "Safari may clear data from sites you have not used for a while. Install ReyCam or keep a backup.", "videoNoSound": "Exported without sound because this browser cannot encode audio.",
   "navFilters": "Filters", "navEdit": "Edit", "navUpload": "Upload", "done": "Done", "back": "Back", "pickPhoto": "Photo", "pickVideo": "Video", "takePhoto": "Camera", "pickPhotoHint": "From your gallery", "pickVideoHint": "Edit a clip with any look", "takePhotoHint": "Take a new photo now", "uploadTitle": "Upload", "editHint": "Pick a tool", "filtersHint": "Preview on your photo",
   "welcomeKicker": "Photo & video editor", "welcomeTitle": "Give every shot a vibe.", "welcomeSub": "625 film looks, vintage cameras and pro tools. Right in your browser, nothing to install.", "welcomeStart": "Choose photo or video", "welcomeDemo": "Try with a sample", "welcomeF1": "625 looks", "welcomeF2": "Photos & videos", "welcomeF3": "Private: stays on your device",
-  "quickLooks": "Quick filters", "seeAll": "See all", "shortcuts": "Shortcuts", "autoShort": "Auto"
+  "quickLooks": "Quick filters", "seeAll": "See all", "shortcuts": "Shortcuts", "autoShort": "Auto", "savedToGallery": "Saved to Photos"
 }

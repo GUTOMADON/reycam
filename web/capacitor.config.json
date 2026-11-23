@@ -1,0 +1,16 @@
+{
+  "appId": "com.reycam.app",
+  "appName": "ReyCam",
+  "webDir": "dist",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#0E0709"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 800,
+      "backgroundColor": "#0E0709",
+      "showSpinner": false
+    }
+  }
+}

@@ -19,3 +19,9 @@ web/.cert/
 # Vercel and Netlify CLI link folders
 .vercel/
 .netlify/
+
+# Native iOS build output (generated in CI)
+web/ios/
+web/build/
+web/Payload/
+*.ipa

@@ -1,0 +1,93 @@
+# Builds an unsigned ReyCam.ipa on a macOS runner.
+# Install it on an iPhone with Sideloadly or AltStore, which sign it with your Apple ID.
+# The file is attached to a GitHub Release ("iOS build N") and kept as a workflow artifact.
+name: iOS app (IPA)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - '.github/workflows/ios-ipa.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  ipa:
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Create iOS project
+        run: npx cap add ios
+
+      - name: App icon and splash from the ReyCam logo
+        run: npx capacitor-assets generate --ios
+
+      - name: Permissions (Photos, Camera, Microphone)
+        run: |
+          PLIST=ios/App/App/Info.plist
+          set_key() { /usr/libexec/PlistBuddy -c "Delete :$1" "$PLIST" 2>/dev/null || true; /usr/libexec/PlistBuddy -c "Add :$1 string $2" "$PLIST"; }
+          set_key NSPhotoLibraryAddUsageDescription "ReyCam saves your edited photos and videos to your gallery."
+          set_key NSPhotoLibraryUsageDescription "ReyCam opens photos and videos from your gallery so you can edit them."
+          set_key NSCameraUsageDescription "ReyCam uses the camera to take a new photo to edit."
+          set_key NSMicrophoneUsageDescription "ReyCam records sound when you film a video to edit."
+          /usr/libexec/PlistBuddy -c "Delete :UIStatusBarStyle" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :UIStatusBarStyle string UIStatusBarStyleLightContent" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Delete :UIFileSharingEnabled" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :UIFileSharingEnabled bool true" "$PLIST"
+
+      - name: Sync web app and plugins
+        run: npx cap sync ios
+
+      - name: Compile (unsigned)
+        run: |
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build | tail -n 40
+          test -d build/Build/Products/Release-iphoneos/App.app
+
+      - name: Package IPA
+        run: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/App.app Payload/ReyCam.app
+          zip -qry ReyCam.ipa Payload
+          ls -lh ReyCam.ipa
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ReyCam-ipa
+          path: web/ReyCam.ipa
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="ios-build-${{ github.run_number }}"
+          gh release create "$TAG" ReyCam.ipa \
+            --title "iOS build ${{ github.run_number }}" \
+            --notes "Unsigned ReyCam.ipa built from ${{ github.sha }}. Install with Sideloadly or AltStore (see README, Install on iPhone)." \
+            --latest

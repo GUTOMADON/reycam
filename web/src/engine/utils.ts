@@ -1,6 +1,7 @@
 import type { Adj, EditState } from './types';
 import { ADJ_KEYS, BANDS } from './types';
 import { formatDate } from './pipeline';
+import { isNative } from '../platform';
 
 export function allAdjKeys(): string[] {
   const keys: string[] = [...ADJ_KEYS];
@@ -85,11 +86,46 @@ export function autoEnhance(src: CanvasImageSource, w: number, h: number): Parti
   };
 }
 
-export async function deliverBlob(blob: Blob, name: string, preferShare: boolean): Promise<void> {
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result).split(',')[1] || '');
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(blob);
+  });
+}
+
+/**
+ * Inside the native iOS or Android app, save straight to the photo gallery.
+ * The file is written to the app cache first, so large videos do not travel
+ * as one huge base64 string across the bridge to the Photos API.
+ */
+async function saveToGallery(blob: Blob, name: string): Promise<boolean> {
+  if (!isNative()) return false;
+  try {
+    const [{ Filesystem, Directory }, { Media }] = await Promise.all([
+      import('@capacitor/filesystem'),
+      import('@capacitor-community/media')
+    ]);
+    const written = await Filesystem.writeFile({ path: name, data: await blobToBase64(blob), directory: Directory.Cache });
+    const isVideo = blob.type.startsWith('video');
+    if (isVideo) await Media.saveVideo({ path: written.uri });
+    else await Media.savePhoto({ path: written.uri });
+    Filesystem.deleteFile({ path: name, directory: Directory.Cache }).catch(() => undefined);
+    return true;
+  } catch (e) {
+    console.warn('Saving to the gallery failed, falling back to share', e);
+    return false;
+  }
+}
+
+/** Returns true when the file went straight into the phone gallery. */
+export async function deliverBlob(blob: Blob, name: string, preferShare: boolean): Promise<boolean> {
+  if (await saveToGallery(blob, name)) return true;
   const file = new File([blob], name, { type: blob.type });
   const nav = navigator as any;
   if (preferShare && nav.canShare && nav.canShare({ files: [file] })) {
-    try { await nav.share({ files: [file], title: 'ReyCam' }); return; } catch { /* user cancelled, fall back to download */ }
+    try { await nav.share({ files: [file], title: 'ReyCam' }); return false; } catch { /* user cancelled, fall back to download */ }
   }
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -98,6 +134,7 @@ export async function deliverBlob(blob: Blob, name: string, preferShare: boolean
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  return false;
 }
 
 export interface Preset { id: string; name: string; edit: EditState; created: number }
