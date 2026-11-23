@@ -48,6 +48,7 @@
 - **Export.** JPEG, PNG or WebP at full resolution. MP4 (H.264 and AAC) processed frame by frame with WebCodecs, with a real time recorder fallback for older browsers.
 - **Favorites, presets and workflow.** Heart any look, save your own presets, copy and paste edits, undo and redo, and hold to compare.
 - **Automatic language.** Follows the phone or browser language, then a server hint, and can always be changed by hand. English, Portuguese, Spanish, Mandarin, Hindi and German are fully translated, and right to left layouts work for Arabic, Hebrew, Persian and Urdu.
+- **iPhone formats.** HEIC and HEIF photos open everywhere: Safari decodes them natively and other browsers convert them on the device to a full quality JPEG (with the photo's rotation). iPhone `.mov` videos open wherever the device can play HEVC, with a clear tip when it cannot.
 - **Built for phones.** A welcome screen, three big bottom buttons (Filters, Edit, Upload) that open full screen pages, a quick filters strip, one tap shortcuts, sliders docked under the photo, and support for iPhone notches and Android gesture bars.
 - **Installable PWA** with an offline app shell.
 

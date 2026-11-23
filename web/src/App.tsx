@@ -373,7 +373,8 @@ export default function App() {
         detectFps(v);
         setTab('looks'); setPage(null); setWelcome(false);
       };
-      v.onerror = () => showToast(t.useMedia);
+      // iPhone videos are usually HEVC in a .mov; browsers without an HEVC decoder cannot play them.
+      v.onerror = () => showToast(/\.(mov|hevc)$/i.test(f.name) || /quicktime|hevc/i.test(f.type) ? t.hevcNote : t.useMedia);
       v.src = url;
       v.load();
       return;
@@ -386,7 +387,27 @@ export default function App() {
       setPlaying(false);
       setTab('looks'); setPage(null); setWelcome(false);
     };
-    img.onerror = () => showToast(/hei[cf]/i.test(f.type + f.name) ? t.heicNote : t.useMedia);
+    // Safari opens HEIC by itself. Chrome, Firefox and Android do not, so the
+    // photo is converted to a full quality JPEG on the device and opened again.
+    let converted = false;
+    img.onerror = async () => {
+      if (converted) { showToast(t.heicNote); return; }
+      try {
+        const { heicTo, isHeic } = await import('heic-to');
+        const looksHeic = /hei[cf]/i.test(f.type + f.name) || await isHeic(f);
+        if (!looksHeic) { showToast(t.useMedia); return; }
+        converted = true;
+        setBusy({ label: t.heicConverting, pct: 0 });
+        const jpeg = await heicTo({ blob: f, type: 'image/jpeg', quality: 0.95 });
+        const jurl = URL.createObjectURL(jpeg);
+        urls.current.push(jurl);
+        img.src = jurl;
+      } catch {
+        showToast(t.heicNote);
+      } finally {
+        setBusy(null);
+      }
+    };
     img.src = url;
   }, [showToast, t]);
 
@@ -754,7 +775,7 @@ export default function App() {
             <label className="welcome-cta">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6M4 20h16" /></svg>
               {t.welcomeStart}
-              <input type="file" accept="image/*,video/*" onChange={(e) => { openFile(e.target.files?.[0]); e.target.value = ''; }} />
+              <input type="file" accept="image/*,video/*,.heic,.heif,.mov,.m4v" onChange={(e) => { openFile(e.target.files?.[0]); e.target.value = ''; }} />
             </label>
             {canInstallIOS && (
               <button type="button" className="welcome-install" onClick={() => setInstallOpen(true)}>
@@ -838,7 +859,7 @@ export default function App() {
           {!isMobile && <label className="btn file">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6M4 20h16" /></svg>
             <span>{t.upload}</span>
-            <input type="file" accept="image/*,video/*" onChange={(e) => { openFile(e.target.files?.[0]); e.target.value = ''; }} />
+            <input type="file" accept="image/*,video/*,.heic,.heif,.mov,.m4v" onChange={(e) => { openFile(e.target.files?.[0]); e.target.value = ''; }} />
           </label>}
           <button type="button" className="btn primary" onClick={() => setExportOpen(true)} disabled={!!busy}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M12 4v12M6 10l6 6 6-6M4 20h16" /></svg>
@@ -1026,8 +1047,8 @@ export default function App() {
               {page === 'upload' && (
                 <div className="page-body upload-page">
                   {[
-                    { k: 'photo', accept: 'image/*', title: t.pickPhoto, hint: t.pickPhotoHint, icon: 'M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2zM4 15l4-4 5 5M13 13l2-2 5 5M15.5 8.5h.01' },
-                    { k: 'video', accept: 'video/*', title: t.pickVideo, hint: t.pickVideoHint, icon: 'M3 6a2 2 0 012-2h10a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2zM17 10l4-3v10l-4-3' },
+                    { k: 'photo', accept: 'image/*,.heic,.heif', title: t.pickPhoto, hint: t.pickPhotoHint, icon: 'M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2zM4 15l4-4 5 5M13 13l2-2 5 5M15.5 8.5h.01' },
+                    { k: 'video', accept: 'video/*,.mov,.m4v,.hevc', title: t.pickVideo, hint: t.pickVideoHint, icon: 'M3 6a2 2 0 012-2h10a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2zM17 10l4-3v10l-4-3' },
                     { k: 'camera', accept: 'image/*', capture: true, title: t.takePhoto, hint: t.takePhotoHint, icon: 'M4 8a2 2 0 012-2h2l2-2h4l2 2h2a2 2 0 012 2v10a2 2 0 01-2 2H6a2 2 0 01-2-2zM12 10a3.5 3.5 0 100 7 3.5 3.5 0 000-7z' }
                   ].map((o) => (
                     <label key={o.k} className={'upload-card ' + o.k}>

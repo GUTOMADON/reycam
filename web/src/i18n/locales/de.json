@@ -255,7 +255,9 @@
     "savedToGallery": "In Fotos gespeichert",
     "installOpenSafari": "Zum Installieren öffne diese Seite in Safari",
     "copyLink": "Link kopieren",
-    "linkCopied": "Link kopiert. In Safari einfügen"
+    "linkCopied": "Link kopiert. In Safari einfügen",
+    "heicConverting": "HEIC-Foto wird umgewandelt…",
+    "hevcNote": "Dieser Browser kann dieses Video (HEVC / High Efficiency) nicht abspielen. Öffne ReyCam in Safari oder auf dem Handy, oder wähle auf dem iPhone Einstellungen → Kamera → Formate → Maximale Kompatibilität."
   },
   "looks": {
     "original": "Keine Kamera, nur deine Bearbeitung",

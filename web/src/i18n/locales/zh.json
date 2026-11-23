@@ -255,7 +255,9 @@
     "savedToGallery": "已保存到相册",
     "installOpenSafari": "请在 Safari 中打开此页面进行安装",
     "copyLink": "复制链接",
-    "linkCopied": "链接已复制，请粘贴到 Safari"
+    "linkCopied": "链接已复制，请粘贴到 Safari",
+    "heicConverting": "正在转换 HEIC 照片…",
+    "hevcNote": "此浏览器无法播放该视频（HEVC / 高效）。请在 Safari 或手机上打开 ReyCam，或在 iPhone 上选择 设置 → 相机 → 格式 → 兼容性最佳。"
   },
   "looks": {
     "original": "不用相机，只有你的调整",

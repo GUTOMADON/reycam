@@ -255,7 +255,9 @@
     "savedToGallery": "Salvo na galeria",
     "installOpenSafari": "Para instalar, abra esta página no Safari",
     "copyLink": "Copiar link",
-    "linkCopied": "Link copiado. Cole no Safari"
+    "linkCopied": "Link copiado. Cole no Safari",
+    "heicConverting": "Convertendo foto HEIC…",
+    "hevcNote": "Este navegador não reproduz este vídeo (HEVC / Alta Eficiência). Abra o ReyCam no Safari ou no celular, ou no iPhone use Ajustes → Câmera → Formatos → Mais Compatível."
   },
   "looks": {
     "original": "Sem câmera, só os seus ajustes",
