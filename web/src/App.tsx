@@ -19,6 +19,30 @@ const NO_DATE_KEY = 'reycam.noDate.v1';
 const readPref = (k: string): string | null => { try { return localStorage.getItem(k); } catch { return null; } };
 const writePref = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* storage blocked */ } };
 const loadFavs = (): Set<string> => { try { return new Set(JSON.parse(localStorage.getItem(FAV_KEY) || '[]')); } catch { return new Set(); } };
+/** Simple line icons for the phone tab bar. */
+const TAB_ICON: Record<string, string> = {
+  looks: 'M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2zM4 15l4-4 5 5M13 13l2-2 5 5',
+  light: 'M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4M12 8a4 4 0 100 8 4 4 0 000-8z',
+  color: 'M12 3a9 9 0 100 18c1 0 1.5-.8 1.2-1.7-.4-1 .3-2.3 1.5-2.3H17a4 4 0 004-4c0-5-4-10-9-10zM7.5 11.5h.01M10 7.5h.01M15 8h.01',
+  hsl: 'M12 3a9 9 0 100 18 9 9 0 000-18zM12 3v18M3.5 9h17M3.5 15h17',
+  curve: 'M4 20C10 20 9 4 20 4M4 4v16h16',
+  grading: 'M8 9a5 5 0 100 10 5 5 0 000-10zM16 9a5 5 0 100 10 5 5 0 000-10zM12 3a5 5 0 100 10 5 5 0 000-10z',
+  detail: 'M4 4h6v6H4zM14 14h6v6h-6zM14 4h6v6h-6zM4 14h6v6H4z',
+  effects: 'M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z',
+  retouch: 'M15 4l5 5L9 20H4v-5zM13 6l5 5',
+  frame: 'M3 3h18v18H3zM7 7h10v10H7z',
+  crop: 'M6 2v16h16M2 6h16v16',
+  stamp: 'M4 7h16v13H4zM8 3v4M16 3v4M8 12h3M8 16h8',
+  layer: 'M12 3l9 5-9 5-9-5zM3 13l9 5 9-5'
+};
+function TabIcon({ id }: { id: string }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={TAB_ICON[id] || TAB_ICON.effects} />
+    </svg>
+  );
+}
+
 const PANEL_KEY: Record<string, string> = {
   looks: 'pLooks', light: 'pLight', curve: 'pCurve', color: 'pColor', hsl: 'pHsl', grading: 'pGrading', detail: 'pDetail',
   effects: 'pEffects', retouch: 'pRetouch', frame: 'pFrame', crop: 'pCrop', stamp: 'pStamp', layer: 'pLayer'
@@ -65,6 +89,10 @@ export default function App() {
   const [fatal, setFatal] = useState('');
   const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 1099px)').matches);
   const [favs, setFavs] = useState<Set<string>>(loadFavs);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [page, setPage] = useState<null | 'filters' | 'edit' | 'upload'>(null);
+  const [tool, setTool] = useState<string | null>(null);
+  const [welcome, setWelcome] = useState(true);
 
   const pipeRef = useRef<Pipeline | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -340,7 +368,7 @@ export default function App() {
         setProgress(0);
         setMedia({ type: 'video', el: v, w: v.videoWidth, h: v.videoHeight, name: f.name, file: f });
         detectFps(v);
-        setTab('looks');
+        setTab('looks'); setPage(null); setWelcome(false);
       };
       v.onerror = () => showToast(t.useMedia);
       v.src = url;
@@ -353,7 +381,7 @@ export default function App() {
       mediaVersion.current++;
       setMedia({ type: 'photo', el: img, w: img.naturalWidth, h: img.naturalHeight, name: f.name, file: f });
       setPlaying(false);
-      setTab('looks');
+      setTab('looks'); setPage(null); setWelcome(false);
     };
     img.onerror = () => showToast(/hei[cf]/i.test(f.type + f.name) ? t.heicNote : t.useMedia);
     img.src = url;
@@ -617,13 +645,37 @@ export default function App() {
   const isVideo = media?.type === 'video';
   const activePanel = isMobile ? tab : panel;
 
+  // A few eye-catching looks from different categories for the welcome screen.
+  const showcase = useMemo(() => {
+    const cats = ['film', 'moody', 'bw', 'y2k', 'flash', 'green'];
+    return cats.map((c) => RECIPES.find((r) => r.cat === c)).filter(Boolean) as Recipe[];
+  }, []);
+  useEffect(() => {
+    if (!welcome) return;
+    setVisibleThumbIds((cur) => showcase.every((r) => cur.has(r.id)) ? cur : new Set([...cur, ...showcase.map((r) => r.id)]));
+  }, [welcome, showcase]);
+
+  // Quick filters strip on the phone editor: current category, selected look first.
+  const quickLooks = useMemo(() => {
+    const list = looks.slice(0, 14);
+    const sel = allLooks.find((r) => r.id === edit.camId);
+    return sel && !list.includes(sel) ? [sel, ...list.slice(0, 13)] : list;
+  }, [looks, allLooks, edit.camId]);
+  useEffect(() => {
+    if (!isMobile) return;
+    setVisibleThumbIds((cur) => quickLooks.every((r) => cur.has(r.id)) ? cur : new Set([...cur, ...quickLooks.map((r) => r.id)]));
+  }, [isMobile, quickLooks]);
+
+  const pickLookAndClose = useCallback((id: string) => { pickLook(id); setPage(null); }, [pickLook]);
+
   const library = (
     <Library
       t={t} lang={lang} categories={CATEGORIES} counts={counts} total={allLooks.length}
       cat={cat} setCat={setCat} query={query} setQuery={setQuery}
       looks={looks} thumbs={thumbs} selectedId={edit.camId} favs={favs}
-      onPick={pickLook} onFav={toggleFav} onDelete={deletePreset}
+      onPick={isMobile ? pickLookAndClose : pickLook} onFav={toggleFav} onDelete={deletePreset}
       onVisible={(id) => setVisibleThumbIds((current) => current.has(id) ? current : new Set([...current, id]))}
+      mobile={isMobile}
     />
   );
 
@@ -654,6 +706,15 @@ export default function App() {
     }
   };
 
+  const toolButtons = (
+    <div className="tool-group">
+      <button type="button" className="btn small" onClick={() => { clipboard.current = { ...edit }; showToast(t.editsCopied); }}>{t.copyEdits}</button>
+      <button type="button" className="btn small" disabled={!clipboard.current} onClick={() => { if (clipboard.current) { commit({ ...clipboard.current, dateText: edit.dateText }); showToast(t.editsPasted); } }}>{t.pasteEdits}</button>
+      <button type="button" className="btn small" onClick={() => { setPresetName(''); setPresetDialog(true); }}>{t.savePreset}</button>
+      <button type="button" className="btn small ghost" onClick={() => commit({ ...defaultEdit(), camId: edit.camId, dateText: edit.dateText })}>{t.resetEdits}</button>
+    </div>
+  );
+
   return (
     <div
       className={dragOver ? 'app drag' : 'app'}
@@ -661,8 +722,46 @@ export default function App() {
       onDragLeave={(e) => { if (e.currentTarget === e.target) setDragOver(false); }}
       onDrop={(e) => { e.preventDefault(); setDragOver(false); openFile(e.dataTransfer.files?.[0]); }}
     >
+      {welcome && (
+        <div className="welcome" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
+          <div className="welcome-glow" aria-hidden="true" />
+          <div className="welcome-brand">
+            <LogoMark size={isMobile ? 38 : 44} />
+            <Wordmark size={isMobile ? 24 : 28} />
+          </div>
+          <div className="welcome-collage" aria-hidden="true">
+            {showcase.map((r, i) => (
+              <figure key={r.id} className={'wc-card wc-' + i}>
+                {thumbs[r.id] ? <img src={thumbs[r.id]} alt="" /> : <span className="thumb-ph" />}
+                <figcaption>{r.name}</figcaption>
+              </figure>
+            ))}
+          </div>
+          <div className="welcome-copy">
+            <span className="welcome-kicker">✦ {t.welcomeKicker}</span>
+            <h1 id="welcome-title">{t.welcomeTitle}</h1>
+            <p>{t.welcomeSub}</p>
+            <ul className="welcome-feats">
+              <li>🎞️ {t.welcomeF1}</li>
+              <li>🎬 {t.welcomeF2}</li>
+              <li>🔒 {t.welcomeF3}</li>
+            </ul>
+          </div>
+          <div className="welcome-actions">
+            <label className="welcome-cta">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6M4 20h16" /></svg>
+              {t.welcomeStart}
+              <input type="file" accept="image/*,video/*" onChange={(e) => { openFile(e.target.files?.[0]); e.target.value = ''; }} />
+            </label>
+            <button type="button" className="welcome-demo" onClick={() => setWelcome(false)}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.2 6.3L20.5 10l-6.3 2.2L12 18.5l-2.2-6.3L3.5 10l6.3-1.7z" /></svg>
+              {t.welcomeDemo}
+            </button>
+          </div>
+        </div>
+      )}
       <header className="top">
-        <div className="brand">
+        <div className="brand" role="button" tabIndex={0} style={{ cursor: "pointer" }} onClick={() => setWelcome(true)} onKeyDown={(e) => { if (e.key === "Enter") setWelcome(true); }}>
           <LogoMark size={isMobile ? 34 : 40} />
           <Wordmark size={isMobile ? 21 : 25} />
         </div>
@@ -674,19 +773,24 @@ export default function App() {
           </div>
         )}
         <div className="top-actions">
-          <label className="lang">
+          {isMobile && (
+            <button type="button" className="icon-btn ghost" aria-label={t.tools} aria-expanded={moreOpen} onClick={() => setMoreOpen(true)}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" /></svg>
+            </button>
+          )}
+          {!isMobile && <label className="lang">
             <span className="sr">{t.language}</span>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18" /></svg>
             <select value={langPref} onChange={(e) => chooseLang(e.target.value)} aria-label={t.language} data-testid="lang">
               <option value={AUTO}>{t.langAuto} · {LANGUAGES.find((l) => l.code === autoLang)?.name || autoLang}</option>
               {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
             </select>
-          </label>
-          <label className="btn file">
+          </label>}
+          {!isMobile && <label className="btn file">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6M4 20h16" /></svg>
-            <span className={isMobile ? 'sr' : ''}>{t.upload}</span>
+            <span>{t.upload}</span>
             <input type="file" accept="image/*,video/*" onChange={(e) => { openFile(e.target.files?.[0]); e.target.value = ''; }} />
-          </label>
+          </label>}
           <button type="button" className="btn primary" onClick={() => setExportOpen(true)} disabled={!!busy}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M12 4v12M6 10l6 6 6-6M4 20h16" /></svg>
             {t.export}
@@ -698,7 +802,7 @@ export default function App() {
       <main className="main">
         {!isMobile && <aside className="side left">{library}</aside>}
 
-        <section className="center">
+        <section className={isMobile && tool ? "center tool-on" : "center"}>
           <div className="stage">
             <canvas ref={canvasRef} className="preview" />
             <div className="stage-chips">
@@ -710,6 +814,28 @@ export default function App() {
               )}
               {comparing && <span className="chip cream">{t.original}</span>}
             </div>
+            {isMobile && (
+              <div className="stage-tools">
+                <button type="button" className="float-btn" aria-label={t.undo} onClick={undo} disabled={!history.current.past.length}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M9 14L4 9l5-5" /><path d="M4 9h10a6 6 0 010 12h-3" /></svg>
+                </button>
+                <button type="button" className="float-btn" aria-label={t.redo} onClick={redo} disabled={!history.current.future.length}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M15 14l5-5-5-5" /><path d="M20 9H10a6 6 0 000 12h3" /></svg>
+                </button>
+                <button
+                  type="button"
+                  className={comparing ? 'float-btn on' : 'float-btn'}
+                  aria-label={t.compare}
+                  onPointerDown={() => setComparing(true)}
+                  onPointerUp={() => setComparing(false)}
+                  onPointerLeave={() => setComparing(false)}
+                  onPointerCancel={() => setComparing(false)}
+                  onContextMenu={(e) => e.preventDefault()}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3" /><path d="M12 4v16" /></svg>
+                </button>
+              </div>
+            )}
             {busy && (
               <div className="busy" role="status">
                 <span>{busy.label}{busy.pct ? ` ${busy.pct}%` : ''}</span>
@@ -721,6 +847,7 @@ export default function App() {
           </div>
           {media?.sample && !isMobile && <p className="note center-note">{t.sampleNote}</p>}
           <div className="toolbar">
+            {!isMobile && <>
             <button
               type="button"
               className="icon-btn"
@@ -739,6 +866,7 @@ export default function App() {
             <button type="button" className="icon-btn" aria-label={t.redo} title={t.redo} onClick={redo} disabled={!history.current.future.length}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M15 14l5-5-5-5" /><path d="M20 9H10a6 6 0 000 12h3" /></svg>
             </button>
+            </>}
             {isVideo && (
               <>
                 <button type="button" className="btn small accent-btn" onClick={togglePlay}>{playing ? t.pause : t.play}</button>
@@ -758,21 +886,127 @@ export default function App() {
               <input type="range" min={0} max={100} value={edit.intensity} onChange={(e) => setEdit({ intensity: Number(e.target.value) })} />
               <span className="val">{edit.intensity}%</span>
             </label>
-            <div className="tool-group">
-              <button type="button" className="btn small" onClick={() => { clipboard.current = { ...edit }; showToast(t.editsCopied); }}>{t.copyEdits}</button>
-              <button type="button" className="btn small" disabled={!clipboard.current} onClick={() => { if (clipboard.current) { commit({ ...clipboard.current, dateText: edit.dateText }); showToast(t.editsPasted); } }}>{t.pasteEdits}</button>
-              <button type="button" className="btn small" onClick={() => { setPresetName(''); setPresetDialog(true); }}>{t.savePreset}</button>
-              <button type="button" className="btn small ghost" onClick={() => commit({ ...defaultEdit(), camId: edit.camId, dateText: edit.dateText })}>{t.resetEdits}</button>
-            </div>
+            {!isMobile && toolButtons}
           </div>
-          {isMobile && (
-            <div className="mobile-panel">
-              <div className="mobile-body">{panelBody(activePanel)}</div>
-              <nav className="tabs" aria-label={t.tools}>
-                {['looks', ...PANELS].map((p) => (
-                  <button key={p} type="button" data-panel={p} className={tab === p ? 'tab on' : 'tab'} aria-pressed={tab === p} onClick={() => setTab(p)}>{(t as any)[PANEL_KEY[p]]}</button>
+          {isMobile && tool && (
+            <div className="tool-dock">
+              <div className="tool-dock-head">
+                <span className="tool-dock-title"><TabIcon id={tool} />{(t as any)[PANEL_KEY[tool]]}</span>
+                <button type="button" className="btn small primary pill-btn" onClick={() => setTool(null)}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10" /></svg>
+                  {t.done}
+                </button>
+              </div>
+              <div className="tool-dock-body">{panelBody(tool)}</div>
+            </div>
+          )}
+          {isMobile && !tool && (
+            <div className="home-extras">
+              <div className="hx-head">
+                <span>{t.quickLooks}</span>
+                <button type="button" className="hx-link" onClick={() => setPage('filters')}>{t.seeAll} ›</button>
+              </div>
+              <div className="hx-strip">
+                {quickLooks.map((r) => (
+                  <button key={r.id} type="button" className={r.id === edit.camId ? 'hx-look on' : 'hx-look'} onClick={() => pickLook(r.id)}>
+                    {thumbs[r.id] ? <img src={thumbs[r.id]} alt="" /> : <span className="thumb-ph" />}
+                    <span>{r.name}</span>
+                  </button>
                 ))}
-              </nav>
+                <button type="button" className="hx-look hx-more" onClick={() => setPage('filters')}>
+                  <span className="hx-more-ico">+{Math.max(0, allLooks.length - quickLooks.length)}</span>
+                  <span>{t.seeAll}</span>
+                </button>
+              </div>
+              <div className="hx-shortcuts" aria-label={t.shortcuts}>
+                <button type="button" className="hx-sc auto" onClick={() => { runAuto(); showToast(t.autoEnhance); }}>
+                  <span><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.2 6.3L20.5 10l-6.3 2.2L12 18.5l-2.2-6.3L3.5 10l6.3-1.7zM19 15l.8 2.2 2.2.8-2.2.8L19 21l-.8-2.2-2.2-.8 2.2-.8z" /></svg></span>
+                  {t.autoShort}
+                </button>
+                {['light', 'color', 'crop', 'frame', 'stamp'].map((p) => (
+                  <button key={p} type="button" className="hx-sc" onClick={() => setTool(p)}>
+                    <span><TabIcon id={p} /></span>
+                    {(t as any)[PANEL_KEY[p]]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {isMobile && !tool && (
+            <nav className="bottom-nav" aria-label={t.tools}>
+              <button type="button" className="nav-btn" onClick={() => setPage('filters')}>
+                <span className="nav-ico"><TabIcon id="looks" /></span>
+                <span>{t.navFilters}</span>
+              </button>
+              <button type="button" className="nav-btn" onClick={() => setPage('edit')}>
+                <span className="nav-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></svg></span>
+                <span>{t.navEdit}</span>
+              </button>
+              <button type="button" className="nav-btn" onClick={() => setPage('upload')}>
+                <span className="nav-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6M4 20h16" /></svg></span>
+                <span>{t.navUpload}</span>
+              </button>
+            </nav>
+          )}
+          {isMobile && page && (
+            <div className="page" role="dialog" aria-modal="true" aria-label={page === 'filters' ? t.navFilters : page === 'edit' ? t.navEdit : t.uploadTitle}>
+              <header className="page-head">
+                <button type="button" className="page-back" aria-label={t.back} onClick={() => setPage(null)}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
+                </button>
+                <div className="page-title">
+                  <span>{page === 'filters' ? t.navFilters : page === 'edit' ? t.navEdit : t.uploadTitle}</span>
+                  <small>{page === 'filters' ? t.filtersHint : page === 'edit' ? t.editHint : t.upload}</small>
+                </div>
+                {page === 'filters' ? <span className="page-count">{looks.length}</span> : <span className="page-spacer" />}
+              </header>
+              {page === 'filters' && <div className="page-body filters-page">{library}</div>}
+              {page === 'edit' && (
+                <div className="page-body">
+                  <div className="tool-grid">
+                    {PANELS.map((p) => (
+                      <button key={p} type="button" className="tool-card" data-panel={p} onClick={() => { setTool(p); setPage(null); }}>
+                        <span className="tool-card-ico"><TabIcon id={p} /></span>
+                        <span>{(t as any)[PANEL_KEY[p]]}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="sheet-grid">{toolButtons}</div>
+                </div>
+              )}
+              {page === 'upload' && (
+                <div className="page-body upload-page">
+                  {[
+                    { k: 'photo', accept: 'image/*', title: t.pickPhoto, hint: t.pickPhotoHint, icon: 'M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2zM4 15l4-4 5 5M13 13l2-2 5 5M15.5 8.5h.01' },
+                    { k: 'video', accept: 'video/*', title: t.pickVideo, hint: t.pickVideoHint, icon: 'M3 6a2 2 0 012-2h10a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2zM17 10l4-3v10l-4-3' },
+                    { k: 'camera', accept: 'image/*', capture: true, title: t.takePhoto, hint: t.takePhotoHint, icon: 'M4 8a2 2 0 012-2h2l2-2h4l2 2h2a2 2 0 012 2v10a2 2 0 01-2 2H6a2 2 0 01-2-2zM12 10a3.5 3.5 0 100 7 3.5 3.5 0 000-7z' }
+                  ].map((o) => (
+                    <label key={o.k} className={'upload-card ' + o.k}>
+                      <span className="upload-ico"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={o.icon} /></svg></span>
+                      <span className="upload-text"><b>{o.title}</b><small>{o.hint}</small></span>
+                      <svg className="upload-go" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
+                      <input type="file" accept={o.accept} {...(o.capture ? { capture: 'environment' as const } : {})} onChange={(e) => { openFile(e.target.files?.[0]); e.target.value = ''; }} />
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {isMobile && moreOpen && (
+            <div className="sheet-wrap" onClick={() => setMoreOpen(false)}>
+              <div className="sheet" role="dialog" aria-label={t.tools} onClick={(e) => e.stopPropagation()}>
+                <span className="sheet-grip" aria-hidden="true" />
+                <div className="sheet-grid" onClick={() => setMoreOpen(false)}>{toolButtons}</div>
+                <label className="lang sheet-lang">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18" /></svg>
+                  <span className="muted">{t.language}</span>
+                  <select value={langPref} onChange={(e) => chooseLang(e.target.value)} aria-label={t.language}>
+                    <option value={AUTO}>{t.langAuto} · {LANGUAGES.find((l) => l.code === autoLang)?.name || autoLang}</option>
+                    {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
+                  </select>
+                </label>
+                <button type="button" className="btn wide" onClick={() => setMoreOpen(false)}>{t.close}</button>
+              </div>
             </div>
           )}
         </section>

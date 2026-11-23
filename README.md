@@ -48,15 +48,37 @@
 - **Export.** JPEG, PNG or WebP at full resolution. MP4 (H.264 and AAC) processed frame by frame with WebCodecs, with a real time recorder fallback for older browsers.
 - **Favorites, presets and workflow.** Heart any look, save your own presets, copy and paste edits, undo and redo, and hold to compare.
 - **Automatic language.** Follows the phone or browser language, then a server hint, and can always be changed by hand. English, Portuguese, Spanish, Mandarin, Hindi and German are fully translated, and right to left layouts work for Arabic, Hebrew, Persian and Urdu.
+- **Built for phones.** A welcome screen, three big bottom buttons (Filters, Edit, Upload) that open full screen pages, a quick filters strip, one tap shortcuts, sliders docked under the photo, and support for iPhone notches and Android gesture bars.
 - **Installable PWA** with an offline app shell.
 
 ## Screenshots
 
+### Welcome screen
+
+The app opens on a home screen with a floating collage of looks, a short pitch and two buttons: **Choose photo or video** or **Try with a sample**. Tapping the ReyCam logo in the editor brings it back.
+
 <table>
 <tr>
-<td width="50%"><img src="docs/screenshots/looks-grid.png" alt="Original and five looks" /><br/><sub>Top: Original, CCD 2003, Indie Sleaze. Bottom: Red Wine, Instant Flash (instant frame), VHS Tape (overlay).</sub></td>
-<td width="25%"><img src="docs/screenshots/mobile-iphone.png" alt="iPhone layout" /><br/><sub>Phone layout (iPhone)</sub></td>
-<td width="25%"><img src="docs/screenshots/mobile-android.png" alt="Android layout" /><br/><sub>Phone layout (Android)</sub></td>
+<td width="70%"><img src="docs/screenshots/welcome-desktop.png" alt="Welcome screen on desktop" /></td>
+<td width="30%"><img src="docs/screenshots/mobile-iphone-welcome.png" alt="Welcome screen on iPhone" /></td>
+</tr>
+</table>
+
+### Phone app (iOS and Android)
+
+On phones the editor works like a native photo app: the photo gets the space, with three big buttons at the bottom (**Filters**, **Edit**, **Upload**). Each button opens its own full screen page. The home view also has a **Quick filters** strip and **shortcuts** (Auto, Light, Color, Crop, Frame, Date).
+
+<table>
+<tr>
+<td width="25%"><img src="docs/screenshots/mobile-iphone.png" alt="Phone editor on iPhone" /><br/><sub>Editor (iPhone)</sub></td>
+<td width="25%"><img src="docs/screenshots/mobile-iphone-filters.png" alt="Filters page" /><br/><sub>Filters page: every look previewed on your photo, categories on top</sub></td>
+<td width="25%"><img src="docs/screenshots/mobile-iphone-edit.png" alt="Edit page" /><br/><sub>Edit page: pick a tool</sub></td>
+<td width="25%"><img src="docs/screenshots/mobile-iphone-tool.png" alt="Light tool docked under the photo" /><br/><sub>Sliders docked under the photo, with Done</sub></td>
+</tr>
+<tr>
+<td width="25%"><img src="docs/screenshots/mobile-iphone-upload.png" alt="Upload page" /><br/><sub>Upload page: photo, video or camera</sub></td>
+<td width="25%"><img src="docs/screenshots/mobile-android.png" alt="Phone editor on Android" /><br/><sub>Editor (Android, Pixel 7)</sub></td>
+<td width="50%" colspan="2"><img src="docs/screenshots/looks-grid.png" alt="Original and five looks" /><br/><sub>Top: Original, CCD 2003, Indie Sleaze. Bottom: Red Wine, Instant Flash (instant frame), VHS Tape (overlay).</sub></td>
 </tr>
 </table>
 
@@ -68,7 +90,7 @@
 | --- | --- |
 | <img src="docs/screenshots/export-dialog.png" alt="Export dialog" /> | <img src="docs/screenshots/look-mono.png" alt="Mono 400 look" /> |
 
-> All screenshots are captured automatically by [`web/tests/screenshots.mjs`](web/tests/screenshots.mjs) from the running app, with the same test photo used by the test suite.
+> Screenshots are captured from the running app with Playwright. The welcome, phone and desktop editor shots use [`docs/screenshots/sample-photo.png`](docs/screenshots/sample-photo.png) as the uploaded photo. The older look and panel shots come from [`web/tests/screenshots.mjs`](web/tests/screenshots.mjs).
 
 ## Looks
 
