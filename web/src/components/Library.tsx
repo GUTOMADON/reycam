@@ -93,6 +93,7 @@ interface LibraryProps {
   onFav: (id: string) => void;
   onDelete: (id: string) => void;
   onVisible: (id: string) => void;
+  mobile?: boolean;
 }
 
 export const Library = memo(function Library(p: LibraryProps) {
@@ -111,6 +112,65 @@ export const Library = memo(function Library(p: LibraryProps) {
   }, [open]);
 
   const pick = (c: string) => { setCat(c); setOpen(false); };
+  const catRow = useRef<HTMLDivElement>(null);
+
+  // Keep the active category chip in view on phones.
+  useEffect(() => {
+    if (!p.mobile) return;
+    catRow.current?.querySelector<HTMLElement>('.cat-chip.on')?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+  }, [cat, p.mobile]);
+
+  const cards = looks.map((r) => (
+    <LookCard
+      key={r.id}
+      r={r}
+      thumb={thumbs[r.id]}
+      selected={r.id === selectedId && r.cat !== 'mine'}
+      fav={favs.has(r.id)}
+      catLabel={label(r.cat)}
+      desc={descOf(r, lang)}
+      favLabel={favs.has(r.id) ? t.favRemove : t.favAdd}
+      delLabel={t.deletePreset}
+      onPick={p.onPick}
+      onFav={p.onFav}
+      onDelete={p.onDelete}
+      onVisible={p.onVisible}
+    />
+  ));
+
+  const emptyNote = (
+    <>
+      {cat === 'mine' && looks.length === 0 && <p className="note">{t.noPresets}</p>}
+      {cat === 'fav' && looks.length === 0 && <p className="empty"><Heart on={false} size={22} /><span>{t.noFavs}</span></p>}
+      {cat !== 'fav' && cat !== 'mine' && looks.length === 0 && <p className="note">{t.noResults}</p>}
+    </>
+  );
+
+  if (p.mobile) {
+    const chips = ['all', 'fav', ...categories.filter((c) => c !== 'all' && c !== 'fav')];
+    return (
+      <div className="library m-lib">
+        <div className="lib-search m-search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg>
+          <input className="search" type="search" placeholder={t.searchLooks} aria-label={t.searchLooks} value={p.query} onChange={(e) => p.setQuery(e.target.value)} />
+          {p.query && <button type="button" className="m-search-x" aria-label={t.close} onClick={() => p.setQuery('')}>×</button>}
+        </div>
+        <div className="m-cats" ref={catRow} role="tablist" aria-label={t.categories}>
+          {chips.map((c) => (
+            <button key={c} type="button" role="tab" aria-selected={cat === c} className={cat === c ? 'cat-chip on' : 'cat-chip'} onClick={() => pick(c)}>
+              {c === 'fav' ? <Heart on={cat === 'fav'} size={13} /> : c !== 'all' && <span className="dot" style={{ background: CAT_DOT[c] }} aria-hidden="true" />}
+              <span>{label(c)}</span>
+              {c !== 'all' && <span className="n">{counts[c] || 0}</span>}
+            </button>
+          ))}
+        </div>
+        <div className="m-grid-wrap">
+          {emptyNote}
+          <div className="looks m-grid">{cards}</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="library">
@@ -146,29 +206,9 @@ export const Library = memo(function Library(p: LibraryProps) {
         )}
       </div>
 
-      {cat === 'mine' && looks.length === 0 && <p className="note">{t.noPresets}</p>}
-      {cat === 'fav' && looks.length === 0 && <p className="empty"><Heart on={false} size={22} /><span>{t.noFavs}</span></p>}
-      {cat !== 'fav' && cat !== 'mine' && looks.length === 0 && <p className="note">{t.noResults}</p>}
+      {emptyNote}
 
-      <div className="looks">
-        {looks.map((r) => (
-          <LookCard
-            key={r.id}
-            r={r}
-            thumb={thumbs[r.id]}
-            selected={r.id === selectedId && r.cat !== 'mine'}
-            fav={favs.has(r.id)}
-            catLabel={label(r.cat)}
-            desc={descOf(r, lang)}
-            favLabel={favs.has(r.id) ? t.favRemove : t.favAdd}
-            delLabel={t.deletePreset}
-            onPick={p.onPick}
-            onFav={p.onFav}
-            onDelete={p.onDelete}
-            onVisible={p.onVisible}
-          />
-        ))}
-      </div>
+      <div className="looks">{cards}</div>
     </div>
   );
 });
