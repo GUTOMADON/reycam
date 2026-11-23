@@ -185,6 +185,18 @@ npm run dev        # hot reload on http://localhost:5173, proxies /api to port 8
 npm run build      # checks translations, type checks and writes web/dist
 ```
 
+### Install on iPhone as a native app (IPA, no App Store)
+
+Every push to `main` runs [`.github/workflows/ios-ipa.yml`](.github/workflows/ios-ipa.yml) on a macOS runner. It builds the Capacitor iOS app with the ReyCam logo as the app icon, and publishes an unsigned **`ReyCam.ipa`** on the [Releases page](../../releases). In the native app, **Export saves photos and videos straight to the Photos gallery**.
+
+1. Download `ReyCam.ipa` from the latest **iOS build** release.
+2. Install [Sideloadly](https://sideloadly.io) on Windows or macOS (iTunes or Apple Devices must be installed on Windows), plug in the iPhone, drop the IPA in and sign in with your Apple ID.
+3. On the iPhone, trust your Apple ID in **Settings → General → VPN & Device Management**, and on iOS 16 or later turn on **Settings → Privacy & Security → Developer Mode**.
+
+With a free Apple ID the app has to be reinstalled every 7 days (AltStore can refresh it automatically). A paid Apple Developer account removes the limit and allows TestFlight.
+
+To regenerate the icon and splash after changing the logo: `cd web && node scripts/make-app-assets.mjs`.
+
 ### Install on a phone
 
 Phones need HTTPS for the gallery picker and file export (localhost is exempt on computers). Deploy the server behind HTTPS, or test with a tunnel such as `cloudflared tunnel --url http://localhost:8000`, then use **Add to Home Screen** (iOS Safari) or **Install app** (Android Chrome).

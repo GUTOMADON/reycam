@@ -486,8 +486,8 @@ export default function App() {
       const ext = exportOpts.format === 'image/png' ? 'png' : exportOpts.format === 'image/webp' ? 'webp' : 'jpg';
       const blob: Blob | null = await new Promise((res) => out.toBlob(res, exportOpts.format, exportOpts.quality / 100));
       if (blob) {
-        await deliverBlob(blob, `reycam_${Date.now()}.${ext}`, isMobile);
-        showToast(`${t.photoSaved} · ${out.width} × ${out.height}`);
+        const inGallery = await deliverBlob(blob, `reycam_${Date.now()}.${ext}`, isMobile);
+        showToast(`${inGallery ? t.savedToGallery : t.photoSaved} · ${out.width} × ${out.height}`);
       }
     } finally {
       exportingRef.current = false;
@@ -575,9 +575,9 @@ export default function App() {
     exportingRef.current = false;
     dirty.current = true;
     if (blob) {
-      await deliverBlob(blob, `reycam_${Date.now()}.mp4`, isMobile);
+      const inGallery = await deliverBlob(blob, `reycam_${Date.now()}.mp4`, isMobile);
       setBusy(null);
-      showToast(`${t.videoExported} · ${out.width & ~1} × ${out.height & ~1}`);
+      showToast(`${inGallery ? t.savedToGallery : t.videoExported} · ${out.width & ~1} × ${out.height & ~1}`);
     } else if (!cancelRef.current) {
       exportVideoRealtime();
     } else {

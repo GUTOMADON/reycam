@@ -251,7 +251,8 @@
     "quickLooks": "快捷滤镜",
     "seeAll": "查看全部",
     "shortcuts": "快捷工具",
-    "autoShort": "自动"
+    "autoShort": "自动",
+    "savedToGallery": "已保存到相册"
   },
   "looks": {
     "original": "不用相机，只有你的调整",
