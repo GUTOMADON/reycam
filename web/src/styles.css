@@ -539,3 +539,11 @@ input[type='range']::-moz-range-thumb { width: 18px; height: 18px; border-radius
 .btn.collage-btn .collage-card-star { font-size: 18px; }
 .hx-sc.collage > span { background: linear-gradient(135deg, #ff9ad5, #8fd3ff); color: #2A0E18; }
 .welcome-collage-entry { width: min(420px, 100%); display: flex; flex-direction: column; }
+
+/* Bottom nav with four buttons (Filters, Edit, Upload, Collage) */
+@media (max-width: 1099px) {
+  .bottom-nav { grid-template-columns: repeat(4, 1fr); gap: 6px; padding-left: 10px; padding-right: 10px; }
+  .nav-btn { flex-direction: column; gap: 4px; min-height: 64px; font-size: 12px; padding: 0 2px; }
+  .nav-btn.nav-collage { border-color: rgba(182,156,255,0.5); background: linear-gradient(135deg, rgba(255,154,213,0.18), rgba(143,211,255,0.16), rgba(255,229,143,0.14)); }
+  .nav-btn.nav-collage .nav-ico { background: rgba(255,255,255,0.1); font-size: 20px; }
+}
