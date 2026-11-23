@@ -389,23 +389,34 @@ export default function App() {
     };
     // Safari opens HEIC by itself. Chrome, Firefox and Android do not, so the
     // photo is converted to a full quality JPEG on the device and opened again.
-    let converted = false;
+    // This happens silently: HEIC is always accepted and no message is shown.
+    let attempt = 0;
     img.onerror = async () => {
-      if (converted) { showToast(t.heicNote); return; }
-      try {
-        const { heicTo, isHeic } = await import('heic-to');
-        const looksHeic = /hei[cf]/i.test(f.type + f.name) || await isHeic(f);
-        if (!looksHeic) { showToast(t.useMedia); return; }
-        converted = true;
-        setBusy({ label: t.heicConverting, pct: 0 });
-        const jpeg = await heicTo({ blob: f, type: 'image/jpeg', quality: 0.95 });
-        const jurl = URL.createObjectURL(jpeg);
-        urls.current.push(jurl);
-        img.src = jurl;
-      } catch {
-        showToast(t.heicNote);
-      } finally {
-        setBusy(null);
+      attempt++;
+      let heic: typeof import('heic-to');
+      try { heic = await import('heic-to'); } catch { return; }
+      const looksHeic = /hei[cf]/i.test(f.type + f.name) || await heic.isHeic(f).catch(() => false);
+      if (!looksHeic) { if (attempt === 1) showToast(t.useMedia); return; }
+      const show = (blob: Blob) => {
+        const u = URL.createObjectURL(blob);
+        urls.current.push(u);
+        img.src = u;
+      };
+      if (attempt === 1) {
+        // First try: decode straight to a full quality JPEG.
+        try { show(await heic.heicTo({ blob: f, type: 'image/jpeg', quality: 0.95 })); return; } catch { attempt++; }
+      }
+      if (attempt === 2) {
+        // Second try: decode to a bitmap and draw it, which works for HEIC files the JPEG path rejects.
+        try {
+          const bmp = await heic.heicTo({ blob: f, type: 'bitmap' });
+          const c = document.createElement('canvas');
+          c.width = bmp.width; c.height = bmp.height;
+          c.getContext('2d')!.drawImage(bmp, 0, 0);
+          bmp.close?.();
+          const blob: Blob | null = await new Promise((res) => c.toBlob(res, 'image/jpeg', 0.95));
+          if (blob) show(blob);
+        } catch { /* stays silent by design */ }
       }
     };
     img.src = url;
