@@ -6,6 +6,7 @@ import { exportVideoWebCodecs, webCodecsAvailable } from './engine/videoExport';
 import { autoEnhance, defaultEdit, storeDateStyle, deliverBlob, loadPresets, storePresets, syncPresets, zeroAdj, type Preset } from './engine/utils';
 import { AUTO, LANGUAGES, RTL, browserLanguage, isComplete, pickSupported, strings } from './i18n';
 import { LogoMark, Wordmark } from './components/Logo';
+import { isIOS, isIOSSafari, isNative, isStandalone } from './platform';
 import { CropPanel, FramePanel, GradingPanel, HslPanel, LayerPanel, Pills, RetouchPanel, SliderGroup, StampPanel } from './components/Panels';
 import { CAT_KEY, Heart, Library, descOf } from './components/Library';
 
@@ -93,6 +94,8 @@ export default function App() {
   const [page, setPage] = useState<null | 'filters' | 'edit' | 'upload'>(null);
   const [tool, setTool] = useState<string | null>(null);
   const [welcome, setWelcome] = useState(true);
+  const [installOpen, setInstallOpen] = useState(false);
+  const canInstallIOS = isIOS && !isNative() && !isStandalone();
 
   const pipeRef = useRef<Pipeline | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -753,11 +756,57 @@ export default function App() {
               {t.welcomeStart}
               <input type="file" accept="image/*,video/*" onChange={(e) => { openFile(e.target.files?.[0]); e.target.value = ''; }} />
             </label>
+            {canInstallIOS && (
+              <button type="button" className="welcome-install" onClick={() => setInstallOpen(true)}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2.5" /><path d="M12 7v7M9 11l3 3 3-3" /></svg>
+                {t.installHelp}
+              </button>
+            )}
             <button type="button" className="welcome-demo" onClick={() => setWelcome(false)}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.2 6.3L20.5 10l-6.3 2.2L12 18.5l-2.2-6.3L3.5 10l6.3-1.7z" /></svg>
               {t.welcomeDemo}
             </button>
           </div>
+        </div>
+      )}
+      {installOpen && (
+        <div className="install-wrap" onClick={() => setInstallOpen(false)}>
+          <div className="install-sheet" role="dialog" aria-modal="true" aria-labelledby="install-title" onClick={(e) => e.stopPropagation()}>
+            <span className="sheet-grip" aria-hidden="true" />
+            <div className="install-head">
+              <LogoMark size={56} />
+              <div>
+                <h3 id="install-title">{t.installTitle}</h3>
+                <p>{t.installNote}</p>
+              </div>
+            </div>
+            {isIOSSafari ? (
+              <ol className="install-steps">
+                <li>
+                  <span className="install-n">1</span>
+                  <span className="install-txt">{t.installStep1}</span>
+                  <span className="install-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0A84FF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4" /><path d="M6 11H5a1 1 0 00-1 1v8a1 1 0 001 1h14a1 1 0 001-1v-8a1 1 0 00-1-1h-1" /></svg></span>
+                </li>
+                <li>
+                  <span className="install-n">2</span>
+                  <span className="install-txt">{t.installStep2}</span>
+                  <span className="install-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4" /><path d="M12 8v8M8 12h8" /></svg></span>
+                </li>
+                <li>
+                  <span className="install-n">3</span>
+                  <span className="install-txt">{t.installStep3}</span>
+                  <span className="install-ico install-add">✓</span>
+                </li>
+              </ol>
+            ) : (
+              <div className="install-safari">
+                <p>{t.installOpenSafari}</p>
+                <button type="button" className="btn primary wide" onClick={() => { navigator.clipboard?.writeText(location.href).then(() => showToast(t.linkCopied), () => undefined); }}>{t.copyLink}</button>
+              </div>
+            )}
+            <button type="button" className="btn wide" onClick={() => setInstallOpen(false)}>{t.close}</button>
+          </div>
+          {isIOSSafari && <div className="install-arrow" aria-hidden="true">↓</div>}
         </div>
       )}
       <header className="top">

@@ -507,3 +507,24 @@ input[type='range']::-moz-range-thumb { width: 18px; height: 18px; border-radius
   .hx-look { flex-basis: 54px; }
   .hx-look img, .hx-look .thumb-ph, .hx-more-ico { width: 54px; height: 54px; }
 }
+
+/* ===================== iPhone install guide ===================== */
+.welcome-install { position: relative; display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 54px; border-radius: 18px; font-size: 16px; font-weight: 700; border: 1px solid rgba(10, 132, 255, 0.45); background: rgba(10, 132, 255, 0.12); color: #CFE6FF; }
+.welcome-install svg { color: #0A84FF; }
+.welcome-install:active { transform: scale(0.97); }
+.install-wrap { position: fixed; inset: 0; z-index: 80; background: rgba(0, 0, 0, 0.6); display: flex; align-items: flex-end; justify-content: center; animation: fade 0.15s ease-out; }
+.install-sheet { width: min(520px, 100%); background: var(--surface); border-top: 1px solid var(--border); border-radius: 24px 24px 0 0; padding: 8px 18px; padding-bottom: max(90px, calc(env(safe-area-inset-bottom) + 80px)); display: flex; flex-direction: column; gap: 16px; animation: up 0.24s cubic-bezier(.2,.8,.2,1); }
+.install-head { display: flex; align-items: center; gap: 14px; }
+.install-head h3 { margin: 0; font-family: 'Space Grotesk', Inter, sans-serif; font-size: 20px; }
+.install-head p { margin: 4px 0 0; font-size: 13.5px; color: var(--muted); line-height: 1.4; }
+.install-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.install-steps li { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--border-soft); }
+.install-n { flex: 0 0 28px; height: 28px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: #fff; background: linear-gradient(135deg, var(--wine-2), var(--wine)); }
+.install-txt { flex: 1; font-size: 14.5px; font-weight: 600; line-height: 1.35; }
+.install-ico { flex: 0 0 auto; min-width: 38px; height: 38px; padding: 0 8px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: #fff; color: #1c1c1e; font-weight: 700; font-size: 14px; }
+.install-add { color: #0A84FF; }
+.install-safari { display: flex; flex-direction: column; gap: 10px; }
+.install-safari p { margin: 0; font-size: 15px; font-weight: 600; }
+.install-sheet .btn.wide { min-height: 48px; border-radius: 14px; }
+.install-arrow { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 8px); transform: translateX(-50%); font-size: 44px; font-weight: 700; color: #0A84FF; text-shadow: 0 4px 16px rgba(10,132,255,0.6); animation: bob 1s ease-in-out infinite; pointer-events: none; }
+@keyframes bob { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, 10px); } }
