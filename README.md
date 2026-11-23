@@ -185,7 +185,18 @@ npm run dev        # hot reload on http://localhost:5173, proxies /api to port 8
 npm run build      # checks translations, type checks and writes web/dist
 ```
 
+### Install on iPhone from a link (recommended)
+
+The app is published on GitHub Pages by [`.github/workflows/pages.yml`](.github/workflows/pages.yml) on every push: **https://gutomadon.github.io/reycam/**
+
+1. Open the link in **Safari** on the iPhone (not Chrome).
+2. Tap **Share** → **Add to Home Screen** → **Add**.
+
+ReyCam gets its own icon, opens full screen like a native app, works offline after the first visit, and never expires. Share the same link with anyone to let them install it.
+
 ### Install on iPhone as a native app (IPA, no App Store)
+
+An `.ipa` cannot be installed by tapping it on the iPhone: iOS only installs apps signed for that device. Use a computer and the steps below.
 
 Every push to `main` runs [`.github/workflows/ios-ipa.yml`](.github/workflows/ios-ipa.yml) on a macOS runner. It builds the Capacitor iOS app with the ReyCam logo as the app icon, and publishes an unsigned **`ReyCam.ipa`** on the [Releases page](../../releases). In the native app, **Export saves photos and videos straight to the Photos gallery**.
 

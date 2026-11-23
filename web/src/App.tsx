@@ -206,7 +206,7 @@ export default function App() {
       mediaVersion.current++;
       setMedia({ type: 'photo', el: img, w: img.naturalWidth, h: img.naturalHeight, name: 'sample.jpg', sample: true });
     };
-    img.src = '/sample.jpg';
+    img.src = import.meta.env.BASE_URL + 'sample.jpg';
     syncPresets().then((list) => { if (list && list.length) setPresets(list); });
     const mq = window.matchMedia('(max-width: 1099px)');
     const onMq = () => setIsMobile(mq.matches);
