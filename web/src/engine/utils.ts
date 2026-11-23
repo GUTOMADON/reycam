@@ -109,8 +109,15 @@ async function saveToGallery(blob: Blob, name: string): Promise<boolean> {
     ]);
     const written = await Filesystem.writeFile({ path: name, data: await blobToBase64(blob), directory: Directory.Cache });
     const isVideo = blob.type.startsWith('video');
-    if (isVideo) await Media.saveVideo({ path: written.uri });
-    else await Media.savePhoto({ path: written.uri });
+    // Android needs an album to save into; iOS saves to the camera roll without one.
+    let albumIdentifier: string | undefined;
+    if ((window as any).Capacitor?.getPlatform?.() === 'android') {
+      const find = async () => (await Media.getAlbums()).albums.find((a) => a.name === 'ReyCam')?.identifier;
+      albumIdentifier = await find();
+      if (!albumIdentifier) { await Media.createAlbum({ name: 'ReyCam' }); albumIdentifier = await find(); }
+    }
+    if (isVideo) await Media.saveVideo({ path: written.uri, albumIdentifier });
+    else await Media.savePhoto({ path: written.uri, albumIdentifier });
     Filesystem.deleteFile({ path: name, directory: Directory.Cache }).catch(() => undefined);
     return true;
   } catch (e) {

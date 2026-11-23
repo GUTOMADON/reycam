@@ -1,0 +1,83 @@
+# Builds ReyCam.apk (Android) with the ReyCam logo as the app icon.
+# The APK is signed with the Android debug key, so it installs directly on any
+# Android phone after allowing "Install unknown apps". It is attached to a
+# GitHub Release ("Android build N") and kept as a workflow artifact.
+name: Android app (APK)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - '.github/workflows/android-apk.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install
+        run: npm ci
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Create Android project
+        run: npx cap add android
+
+      - name: App icon and splash from the ReyCam logo
+        run: npx capacitor-assets generate --android --iconBackgroundColor '#6E1A35' --splashBackgroundColor '#0E0709'
+
+      - name: Gallery and camera permissions
+        run: |
+          M=android/app/src/main/AndroidManifest.xml
+          PERMS='<uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />\n    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />\n    <uses-permission android:name="android.permission.CAMERA" />'
+          sed -i "s#<uses-permission android:name=\"android.permission.INTERNET\" />#<uses-permission android:name=\"android.permission.INTERNET\" />\n    $PERMS#" "$M"
+          grep -c "READ_MEDIA_IMAGES" "$M"
+
+      - name: Sync web app and plugins
+        run: npx cap sync android
+
+      - name: Compile APK
+        working-directory: web/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon -q
+          cp app/build/outputs/apk/debug/app-debug.apk ../ReyCam.apk
+          ls -lh ../ReyCam.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ReyCam-apk
+          path: web/ReyCam.apk
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="android-build-${{ github.run_number }}"
+          gh release create "$TAG" ReyCam.apk ../docs/install/ReyCam.mobileconfig \
+            --title "Android build ${{ github.run_number }} + iPhone profile" \
+            --notes "ReyCam.apk: tap it on Android and allow installing unknown apps. ReyCam.mobileconfig: open it on iPhone in Safari, then Settings → Profile Downloaded → Install (adds ReyCam to the Home Screen). Built from ${{ github.sha }}." \
+            --latest
