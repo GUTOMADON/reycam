@@ -1017,7 +1017,6 @@ export default function App() {
                 </button>
               </div>
               <div className="hx-shortcuts" aria-label={t.shortcuts}>
-                <button type="button" className="hx-sc collage" onClick={() => setCollageOpen(true)}><span>★</span>{collageStrings(lang).title}</button>
                 <button type="button" className="hx-sc auto" onClick={() => { runAuto(); showToast(t.autoEnhance); }}>
                   <span><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.2 6.3L20.5 10l-6.3 2.2L12 18.5l-2.2-6.3L3.5 10l6.3-1.7zM19 15l.8 2.2 2.2.8-2.2.8L19 21l-.8-2.2-2.2-.8 2.2-.8z" /></svg></span>
                   {t.autoShort}
@@ -1044,6 +1043,10 @@ export default function App() {
               <button type="button" className="nav-btn" onClick={() => setPage('upload')}>
                 <span className="nav-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6M4 20h16" /></svg></span>
                 <span>{t.navUpload}</span>
+              </button>
+              <button type="button" className="nav-btn nav-collage" onClick={() => setCollageOpen(true)}>
+                <span className="nav-ico"><span className="collage-card-star" aria-hidden="true">★</span></span>
+                <span>{collageStrings(lang).title}</span>
               </button>
             </nav>
           )}
