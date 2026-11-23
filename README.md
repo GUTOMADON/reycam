@@ -93,6 +93,33 @@ On phones the editor works like a native photo app: the photo gets the space, wi
 
 > Screenshots are captured from the running app with Playwright. The welcome, phone and desktop editor shots use [`docs/screenshots/sample-photo.png`](docs/screenshots/sample-photo.png) as the uploaded photo. The older look and panel shots come from [`web/tests/screenshots.mjs`](web/tests/screenshots.mjs).
 
+## Collage
+
+The **Collage** category (Portuguese: **Colagem**) turns a photo into a scrapbook or zine page: the person is cut out on the device, a photo treatment is applied, and the result is placed on a styled background with stickers and hand drawn doodles. Every element can be moved, pinched, rotated, recolored, duplicated, flipped, locked, reordered and deleted, and every color comes from named color slots that the Colors panel edits all at once.
+
+- **18 built in templates**: Star Confetti Booth, Candy Stripe Booth, Cherry Print, Ransom Letters, Red Star Overlay, Crayon Split Duo, Paper Stars Night, Sky Silhouette Split, Doodle Stars Print, Retro Desktop Dialog, System Warning 3D, Retro Paint Frame, Love Wall, Starburst Postcard, Chalk Outline Crew, Ribbon Swirl, Cobalt Duotone Pop and Zigzag Rays.
+- **On device cutout** with the MediaPipe Image Segmenter (selfie segmenter, about 250 KB). The model and the WebAssembly runtime ship in `web/public`, so it works offline and photos never leave the device. Refine with restore and erase brushes, a lasso, brush size, softness and zoom.
+- **Cutout styles**: clean, paper sticker (outline 0 to 60 px, rough edge, shadow), torn paper, silhouette fill and shape window.
+- **Treatments**: black and white, sepia, monotone, duotone, halftone, color overlay (multiply, screen, overlay, normal), warm film and flash, on the whole photo or only on the cutout. Frames: photobooth, 35 mm film print, Polaroid and white paper.
+- **Backgrounds**: solid with felt, kraft, watercolor, grainy poster, recycled, folded or fabric texture, stripes, split halves, crayon, painted sky, an original retro desktop scene and your own photo (blur, black and white).
+- **Stickers and doodles**: holographic, pastel, metallic, pearl and puffy stars, paper stars, starbursts, doodle stars with offset outlines, sparkles, dots, swirls, hearts, embroidered patches, ribbons with the **Weave** tool (tap a segment to pass it behind the person), zigzag rays, **auto outline** around the subject, letter tiles, handwritten text, repeated word patterns and an original 90s style desktop kit (dialogs, icons, pointer, selection, toolbox, recycle bin, folder, paint window). **Scatter** places N stars around the subject while keeping the face clear.
+- **Colors**: palette panel with every slot of the collage, a color picker (hue and saturation wheel, brightness, HEX, opacity, recent colors, eyedropper), 12 preset palettes, a shuffle that builds a harmonious palette from the photo, and per element overrides with a relink button.
+- **Editor**: ratios 9:16, 4:5, 3:4, 1:1, 4:3 and free, layers panel with thumbnails, undo and redo (60 steps), snapping to the center, autosaved drafts in **My Collages** (IndexedDB), and **Remix** to switch template while keeping the photo and matching colors.
+- **Export**: PNG or JPEG at 2160 px on the long side or the photo size when larger, no watermark, optional date stamp, saved to Photos in the native apps and shared or downloaded on the web.
+
+Video collages are planned for a second phase.
+
+### Adding a collage template
+
+Templates are plain data in [`web/src/collage/templates.ts`](web/src/collage/templates.ts), typed by `CollageTemplate` in [`types.ts`](web/src/collage/types.ts). Add an object to the list returned by `buildTemplates`:
+
+1. Pick an `id`, a localized `name` (`{ en, pt }`), a `ratio`, filter `tags` and the number of `photos` (1 or 2).
+2. Choose a preset `palette` from [`palettes.ts`](web/src/collage/palettes.ts) and override slots in `colors` with the hex values of your reference. List the slots the Colors panel should show first in `slots`.
+3. Describe the `layers` from back to front. Positions are fractions of the canvas (`x`, `y` = center, `w` = width), so templates work at any size. Point every color to a slot (`{ slot: 'starPrimary' }`) instead of a fixed color, so palettes and the Colors panel can change it.
+4. Use `photo` layers for prints and cutouts, `subject` layers to put the cut out person in front of something drawn over the same photo, and `behind: '<photo layer id>'` on a sticker to hide it behind the person.
+
+No renderer changes are needed. New layer kinds go in `types.ts` and `render.ts`.
+
 ## Looks
 
 | Group | Examples |

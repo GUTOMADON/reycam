@@ -528,3 +528,14 @@ input[type='range']::-moz-range-thumb { width: 18px; height: 18px; border-radius
 .install-sheet .btn.wide { min-height: 48px; border-radius: 14px; }
 .install-arrow { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 8px); transform: translateX(-50%); font-size: 44px; font-weight: 700; color: #0A84FF; text-shadow: 0 4px 16px rgba(10,132,255,0.6); animation: bob 1s ease-in-out infinite; pointer-events: none; }
 @keyframes bob { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, 10px); } }
+
+/* Collage entry points */
+.collage-card { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 16px; border-radius: 18px; border: 1px solid rgba(182,156,255,0.45); background: linear-gradient(120deg, rgba(255,154,213,0.16), rgba(143,211,255,0.14), rgba(255,229,143,0.12)); color: var(--cream); text-align: start; font-size: 22px; }
+.collage-card-text { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.collage-card-text b { font-size: 16px; }
+.collage-card-text small { font-size: 12.5px; color: var(--muted); font-weight: 500; }
+.collage-card-star { font-size: 26px; }
+.btn.collage-btn { border-color: rgba(182,156,255,0.45); }
+.btn.collage-btn .collage-card-star { font-size: 18px; }
+.hx-sc.collage > span { background: linear-gradient(135deg, #ff9ad5, #8fd3ff); color: #2A0E18; }
+.welcome-collage-entry { width: min(420px, 100%); display: flex; flex-direction: column; }
