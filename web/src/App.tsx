@@ -1,4 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { collageStrings } from './collage/strings';
+
+const CollageApp = lazy(() => import('./collage/CollageApp'));
 import { Pipeline } from './engine/pipeline';
 import { RECIPES, CATEGORIES, findRecipe } from './engine/recipes';
 import type { EditState, Recipe } from './engine/types';
@@ -95,6 +98,7 @@ export default function App() {
   const [tool, setTool] = useState<string | null>(null);
   const [welcome, setWelcome] = useState(true);
   const [installOpen, setInstallOpen] = useState(false);
+  const [collageOpen, setCollageOpen] = useState(false);
   const canInstallIOS = isIOS && !isNative() && !isStandalone();
 
   const pipeRef = useRef<Pipeline | null>(null);
@@ -782,6 +786,13 @@ export default function App() {
               <li>🔒 {t.welcomeF3}</li>
             </ul>
           </div>
+          <div className="welcome-collage-entry">
+            <button type="button" className="collage-card" onClick={() => { setWelcome(false); setCollageOpen(true); }}>
+              <span className="collage-card-star" aria-hidden="true">★</span>
+              <span className="collage-card-text"><b>{collageStrings(lang).title}</b><small>{collageStrings(lang).cardSub}</small></span>
+              <span aria-hidden="true">›</span>
+            </button>
+          </div>
           <div className="welcome-actions">
             <label className="welcome-cta">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6M4 20h16" /></svg>
@@ -841,6 +852,11 @@ export default function App() {
           {isIOSSafari && <div className="install-arrow" aria-hidden="true">↓</div>}
         </div>
       )}
+      {collageOpen && (
+        <Suspense fallback={<div className="col-busy"><span className="col-spinner" /></div>}>
+          <CollageApp lang={lang} appT={t} isMobile={isMobile} showToast={showToast} onClose={() => setCollageOpen(false)} />
+        </Suspense>
+      )}
       <header className="top">
         <div className="brand" role="button" tabIndex={0} style={{ cursor: "pointer" }} onClick={() => setWelcome(true)} onKeyDown={(e) => { if (e.key === "Enter") setWelcome(true); }}>
           <LogoMark size={isMobile ? 34 : 40} />
@@ -867,6 +883,7 @@ export default function App() {
               {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
             </select>
           </label>}
+          {!isMobile && <button type="button" className="btn collage-btn" onClick={() => setCollageOpen(true)}><span className="collage-card-star" aria-hidden="true">★</span>{collageStrings(lang).title}</button>}
           {!isMobile && <label className="btn file">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6M4 20h16" /></svg>
             <span>{t.upload}</span>
@@ -1000,6 +1017,7 @@ export default function App() {
                 </button>
               </div>
               <div className="hx-shortcuts" aria-label={t.shortcuts}>
+                <button type="button" className="hx-sc collage" onClick={() => setCollageOpen(true)}><span>★</span>{collageStrings(lang).title}</button>
                 <button type="button" className="hx-sc auto" onClick={() => { runAuto(); showToast(t.autoEnhance); }}>
                   <span><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.2 6.3L20.5 10l-6.3 2.2L12 18.5l-2.2-6.3L3.5 10l6.3-1.7zM19 15l.8 2.2 2.2.8-2.2.8L19 21l-.8-2.2-2.2-.8 2.2-.8z" /></svg></span>
                   {t.autoShort}
