@@ -185,6 +185,14 @@ npm run dev        # hot reload on http://localhost:5173, proxies /api to port 8
 npm run build      # checks translations, type checks and writes web/dist
 ```
 
+### Android app (APK)
+
+[`.github/workflows/android-apk.yml`](.github/workflows/android-apk.yml) builds **`ReyCam.apk`** on every push and attaches it to the latest **Android build** release. Open the APK on the phone, allow **Install unknown apps** for the browser or file manager, and install. Exports are saved to a **ReyCam** album in the gallery.
+
+### iPhone profile (`.mobileconfig`)
+
+[`docs/install/ReyCam.mobileconfig`](docs/install/ReyCam.mobileconfig) (also on the release and at `https://gutomadon.github.io/reycam/ReyCam.mobileconfig`) is an iOS configuration profile that adds ReyCam to the Home Screen with its icon, full screen. Open it in Safari, then go to **Settings → Profile Downloaded → Install**. It needs no computer and no Apple ID, never expires, and can be removed in **Settings → General → VPN & Device Management**. Regenerate it with `cd web && node scripts/make-mobileconfig.mjs [url]`.
+
 ### Install on iPhone from a link (recommended)
 
 The app is published on GitHub Pages by [`.github/workflows/pages.yml`](.github/workflows/pages.yml) on every push: **https://gutomadon.github.io/reycam/**

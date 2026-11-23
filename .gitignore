@@ -25,3 +25,5 @@ web/ios/
 web/build/
 web/Payload/
 *.ipa
+web/android/
+*.apk
