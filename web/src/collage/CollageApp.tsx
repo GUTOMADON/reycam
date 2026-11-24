@@ -15,7 +15,11 @@ import { PRESETS, rgbToHex, shufflePalette } from './palettes';
 import { bumpMask, cropRect, photoBox, renderCollage, sizeFor, RATIOS, type RenderInfo } from './render';
 import { frameInsets } from './treatments';
 import { preloadSegmenter, segment } from './segment';
-import { collageStrings, slotName } from './strings';
+import { collageStrings, slotName, stickerName } from './strings';
+import { PARAMS, TOOLS, UI_FIELDS, getVal, setVal, type Param } from './tools';
+import { STICKER_ASPECT, STICKER_DEFAULTS, STICKER_GROUPS, drawStickerArt } from './stickers';
+import type { HeadsLayer, StickerArt, StickerLayer } from './types';
+import { DEFAULT_INTENSITY, filterChoices, lookExists, luName, rememberFilter, rememberedFilter, type FilterChoice } from './filters';
 import { resolvePaint, isOverridden } from './resolve';
 import { ColorPicker, pushRecent } from './ColorPicker';
 import { rng } from './textures';
@@ -142,7 +146,53 @@ export default function CollageApp({ lang, appT, isMobile, showToast, onClose }:
 
   // ------------------------------------------------------------ start a collage
 
-  const startWith = async (tpl: CollageTemplate, imgs: (HTMLCanvasElement | null)[]) => {
+  // ------------------------------------------------------------ filter pairing sheet
+
+  const [filterAsk, setFilterAsk] = useState<{ imgs: (HTMLCanvasElement | null)[]; choosing: boolean } | null>(null);
+
+  /** Show the "use a filter too?" sheet, or go straight on with the remembered choice. */
+  const askFilter = (tpl: CollageTemplate, imgs: (HTMLCanvasElement | null)[]) => {
+    const remembered = rememberedFilter(tpl.id);
+    if (remembered !== undefined) { startWith(tpl, imgs, remembered); return; }
+    setFilterAsk({ imgs, choosing: false });
+  };
+
+  const chooseFilter = (tpl: CollageTemplate, choice: FilterChoice) => {
+    const imgs = filterAsk?.imgs ?? [];
+    rememberFilter(tpl.id, choice);
+    setFilterAsk(null);
+    startWith(tpl, imgs, choice);
+  };
+
+  const filterSheet = (tpl: CollageTemplate) => {
+    const rec = tpl.filter;
+    const recReady = !!rec && lookExists(rec);
+    return (
+      <div className="modal-wrap" onClick={() => setFilterAsk(null)}>
+        <div className="modal col-filter-sheet" onClick={(e) => e.stopPropagation()}>
+          <h3>{t.filterAsk}</h3>
+          {!filterAsk!.choosing ? (
+            <div className="col-filter-options">
+              <button type="button" className="btn primary" disabled={!recReady} onClick={() => chooseFilter(tpl, { id: rec!, intensity: DEFAULT_INTENSITY })}>
+                {t.filterRecommended}{rec ? ` · ${luName(rec)}` : ''}
+              </button>
+              {!recReady && rec && <p className="note">{t.filterSoon}</p>}
+              <button type="button" className="btn" onClick={() => setFilterAsk({ ...filterAsk!, choosing: true })}>{t.filterOther}</button>
+              <button type="button" className="btn ghost" onClick={() => chooseFilter(tpl, null)}>{t.filterNone}</button>
+            </div>
+          ) : (
+            <div className="col-filter-strip">
+              {filterChoices().map((r) => (
+                <button key={r.id} type="button" className="col-chip" onClick={() => chooseFilter(tpl, { id: r.id, intensity: DEFAULT_INTENSITY })}>{r.name}</button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const startWith = async (tpl: CollageTemplate, imgs: (HTMLCanvasElement | null)[], filter: FilterChoice = null) => {
     const first = imgs[0];
     if (!first) return;
     setBusy(t.cutting);
@@ -154,6 +204,7 @@ export default function CollageApp({ lang, appT, isMobile, showToast, onClose }:
       list.push({ id: uid(), image: img, mask: seg.mask, segmented: seg.ok });
     }
     const d = docFromTemplate(tpl);
+    if (filter) d.filter = filter;
     history.current.clear();
     setPhotos(list);
     setDocState(d);
@@ -487,6 +538,64 @@ export default function CollageApp({ lang, appT, isMobile, showToast, onClose }:
     fill: { slot: 'starPrimary' }, seed: Math.floor(Math.random() * 1e6), ...extra
   } as ShapeLayer);
 
+  const addSticker = (art: StickerArt) => {
+    const [c1, c2] = STICKER_DEFAULTS[art];
+    addLayer({ id: uid(), kind: 'sticker', art, x: 0.5 + (Math.random() - 0.5) * 0.3, y: 0.3 + Math.random() * 0.3, w: 0.16, rot: (Math.random() - 0.5) * 20, paint: { color: c1 }, paint2: { color: c2 }, seed: Math.floor(Math.random() * 999) } as StickerLayer);
+  };
+
+  /** Sliders, toggles, choices and text fields built from the PARAMS table. */
+  const paramControls = (l: Layer) => {
+    let list = PARAMS[l.kind] ?? [];
+    if (l.kind === 'ui') { const f = UI_FIELDS[(l as UiLayer).widget]; if (!f) return null; list = list.filter((p) => f.includes(p.key)); }
+    if (l.kind === 'sticker' && (l as StickerLayer).art !== 'badge' && (l as StickerLayer).art !== 'keytag') list = list.filter((p) => p.key !== 'label');
+    if (!list.length) return null;
+    const set = (key: string, v: unknown, record = true) => mutate((d) => { const x = d.layers.find((y) => y.id === l.id); if (x) setVal(x, key, v); }, record);
+    return (
+      <div className="col-fields">
+        {list.map((p: Param) => {
+          const v = getVal(l, p.key);
+          switch (p.kind) {
+            case 'range': return <div key={p.key}>{range(t[p.label] as string, typeof v === 'number' ? v : p.min, p.min, p.max, p.step, (n) => set(p.key, n, false), p.key)}</div>;
+            case 'toggle': return <div key={p.key} className="col-row">{chip(!!v, t[p.label] as string, () => set(p.key, !v))}</div>;
+            case 'paint': return <div key={p.key} className="col-row">{chip(!!v, t[p.label] as string, () => set(p.key, v ? undefined : { slot: p.slot }))}</div>;
+            case 'text': return p.multiline
+              ? <textarea key={p.key} className="text-input" aria-label={t[p.label] as string} value={String(v ?? '')} onChange={(e) => set(p.key, e.target.value, false)} />
+              : <input key={p.key} className="text-input" aria-label={t[p.label] as string} placeholder={t[p.label] as string} value={String(v ?? '')} onChange={(e) => set(p.key, e.target.value, false)} />;
+            case 'choice': return (
+              <div key={p.key} className="col-row"><span className="col-label">{t[p.label] as string}</span>
+                {p.options.map(([val, lab], i) => chip(JSON.stringify(v) === JSON.stringify(val) || (p.key === 'treatment' && (v as Treatment | undefined)?.type === (val as Treatment).type), t[lab] as string, () => set(p.key, val), String(i)))}
+              </div>
+            );
+          }
+          return null;
+        })}
+      </div>
+    );
+  };
+
+  /** Color block heads: one row per face with its square color, size and offset. */
+  const headsControls = (l: HeadsLayer) => {
+    const setB = (i: number, fn: (b: HeadsLayer['blocks'][number]) => void, record = false) => mutate((d) => { const x = d.layers.find((y) => y.id === l.id) as HeadsLayer; fn(x.blocks[i]); }, record);
+    return (
+      <div className="col-fields">
+        {l.blocks.map((b, i) => (
+          <div key={i}>
+            <div className="col-row">
+              <span className="col-label">{t.face} {i + 1}</span>
+              {swatchBtn(b.paint, { kind: 'paint', layer: l.id, index: paintsOf(l).indexOf(b.paint) }, slotName(lang, b.paint.slot ?? ''))}
+              {swatchBtn(b.ink, { kind: 'paint', layer: l.id, index: paintsOf(l).indexOf(b.ink) }, slotName(lang, b.ink.slot ?? ''))}
+              {l.blocks.length > 1 && <button type="button" className="col-chip" onClick={() => mutate((d) => { (d.layers.find((y) => y.id === l.id) as HeadsLayer).blocks.splice(i, 1); })}>×</button>}
+            </div>
+            {range(t.squareSize, b.size, 0.6, 2.5, 0.05, (v) => setB(i, (x) => { x.size = v; }), 's' + i)}
+            {range(t.offsetX, b.dx, -0.2, 0.2, 0.005, (v) => setB(i, (x) => { x.dx = v; }), 'x' + i)}
+            {range(t.offsetY, b.dy, -0.2, 0.2, 0.005, (v) => setB(i, (x) => { x.dy = v; }), 'y' + i)}
+          </div>
+        ))}
+        <button type="button" className="col-chip on" onClick={() => mutate((d) => { const x = d.layers.find((y) => y.id === l.id) as HeadsLayer; x.blocks.push({ ...clone(x.blocks[x.blocks.length - 1]), rot: (Math.random() - 0.5) * 12 }); })}>＋ {t.face}</button>
+      </div>
+    );
+  };
+
   /** Scatter N stickers around the subject while keeping the face clear. */
   const scatter = (seed = Math.random()) => {
     if (!doc) return;
@@ -618,7 +727,7 @@ export default function CollageApp({ lang, appT, isMobile, showToast, onClose }:
           </>
         )}
         {pl.cutout === 'silhouette' && <div className="col-row">{swatchBtn(pl.fill, { kind: 'paint', layer: pl.id, index: paintsOf(pl).indexOf(pl.fill as Paint) }, t.cutSilhouette)}</div>}
-        {pl.cutout === 'window' && <div className="col-row">{([['star', t.shapeStar], ['burst', t.shapeBurst], ['rounded', t.shapeRounded]] as const).map(([s, label]) => chip((pl.windowShape ?? 'star') === s, label, () => mutate((d) => { (d.layers.find((x) => x.id === pl.id) as PhotoLayer).windowShape = s; }), s))}</div>}
+        {pl.cutout === 'window' && <div className="col-row">{([['star', t.shapeStar], ['burst', t.shapeBurst], ['rounded', t.shapeRounded], ['star4', t.shapeSparkle], ['heart', t.shapeHeart]] as const).map(([s, label]) => chip((pl.windowShape ?? 'star') === s, label, () => mutate((d) => { (d.layers.find((x) => x.id === pl.id) as PhotoLayer).windowShape = s; }), s))}</div>}
         <div className="col-row">{chip(!!pl.shadow, t.shadow, () => mutate((d) => { const l = d.layers.find((x) => x.id === pl.id) as PhotoLayer; l.shadow = !l.shadow; }))}</div>
         <div className="col-row">
           <span className="col-label">{t.refine}</span>
@@ -654,9 +763,27 @@ export default function CollageApp({ lang, appT, isMobile, showToast, onClose }:
     return { target: 'photo', tr: pl.treatment, subj };
   };
 
+  /** Photo filter (filter pairing): change, remove or dose it. Applies to every photo slot. */
+  const filterControls = () => (
+    <>
+      <div className="col-row">
+        <span className="col-label">{t.filter}</span>
+        {chip(!doc!.filter, t.filterNone, () => { mutate((d) => { delete d.filter; }); rememberFilter(doc!.template, null); }, 'nofilter')}
+      </div>
+      <div className="col-filter-strip">
+        {filterChoices().map((r) => chip(doc!.filter?.id === r.id, r.name, () => {
+          const next = { id: r.id, intensity: doc!.filter?.intensity ?? DEFAULT_INTENSITY };
+          mutate((d) => { d.filter = next; });
+          rememberFilter(doc!.template, next);
+        }, r.id))}
+      </div>
+      {doc!.filter && range(t.intensity, doc!.filter.intensity, 0, 100, 5, (v) => mutate((d) => { if (d.filter) d.filter.intensity = v; }, false), 'fint')}
+    </>
+  );
+
   const panelPhoto = () => {
     const pl = photoLayer;
-    if (!pl) return <p className="note">{t.noSelection}</p>;
+    if (!pl) return <>{filterControls()}<p className="note">{t.noSelection}</p></>;
     const { target, tr } = treatmentOf(pl);
     const setTr = (next: Treatment, record = true) => mutate((d) => {
       if (target === 'subject') (d.layers.find((l) => l.kind === 'subject' && (l as SubjectLayer).of === pl.id) as SubjectLayer).treatment = next;
@@ -666,12 +793,18 @@ export default function CollageApp({ lang, appT, isMobile, showToast, onClose }:
       ['none', t.treatNone, { type: 'none' }], ['bw', t.treatBw, { type: 'bw', contrast: 1.15, grain: 0.2 }], ['sepia', t.treatSepia, { type: 'sepia', amount: 0.8, fade: 0.2, grain: 0.15 }],
       ['mono', t.treatMono, { type: 'mono', tint: { slot: 'tint' }, paper: { slot: 'tintSecondary' }, grain: 0.2 }], ['duotone', t.treatDuo, { type: 'duotone', dark: { slot: 'tint' }, light: { slot: 'accent' }, grain: 0.1 }],
       ['halftone', t.treatHalftone, { type: 'halftone', dot: 6, ink: { slot: 'tint' }, paper: { slot: 'paper' } }], ['overlay', t.treatOverlay, { type: 'overlay', color: { slot: 'tint' }, mode: 'multiply', opacity: 0.6 }],
-      ['warm', t.treatWarm, { type: 'warm', amount: 0.8, grain: 0.15 }], ['flash', t.treatFlash, { type: 'flash', contrast: 1.45, grain: 0.25 }]
+      ['warm', t.treatWarm, { type: 'warm', amount: 0.8, grain: 0.15 }], ['flash', t.treatFlash, { type: 'flash', contrast: 1.45, grain: 0.25 }],
+      ['negative', t.treatNegative, { type: 'negative', tint: { slot: 'tintSecondary' }, paper: { slot: 'tint' }, grain: 0.1 }],
+      ['posterize', t.treatPoster, { type: 'posterize', levels: 4, dark: { slot: 'tint' }, light: { slot: 'tintSecondary' } }],
+      ['invert', t.treatInvert, { type: 'invert' }],
+      ['grade', t.treatGrade, { type: 'grade', tint: { slot: 'tint' }, amount: 0.45, contrast: 1.15, fade: 0.1, grain: 0.3 }],
+      ['paint', t.treatPaint, { type: 'paint', scheme: 'neon', lines: 0.6, hatch: { slot: 'doodleFill' } }]
     ];
     const frames: [FrameStyle, string][] = [['none', t.frameNone], ['booth', t.frameBooth], ['film', t.frameFilm], ['polaroid', t.framePolaroid], ['white', t.frameWhite]];
-    const trPaints: [string, Paint][] = tr.type === 'mono' ? [['tint', tr.tint], ['paper', tr.paper]] : tr.type === 'duotone' ? [['dark', tr.dark], ['light', tr.light]] : tr.type === 'halftone' ? [['ink', tr.ink], ['paper', tr.paper]] : tr.type === 'overlay' ? [['color', tr.color]] : [];
+    const trPaints: [string, Paint][] = tr.type === 'mono' || tr.type === 'negative' ? [['tint', tr.tint], ['paper', tr.paper]] : tr.type === 'duotone' || tr.type === 'posterize' ? [['dark', tr.dark], ['light', tr.light]] : tr.type === 'halftone' ? [['ink', tr.ink], ['paper', tr.paper]] : tr.type === 'overlay' ? [['color', tr.color]] : tr.type === 'grade' ? [['tint', tr.tint]] : tr.type === 'paint' ? [['hatch', tr.hatch]] : [];
     return (
       <>
+        {filterControls()}
         {pl.cutout === 'none' && (
           <div className="col-row">
             <span className="col-label">{t.applyTo}</span>
@@ -689,6 +822,14 @@ export default function CollageApp({ lang, appT, isMobile, showToast, onClose }:
         {tr.type === 'sepia' && <>{range(t.amount, tr.amount, 0, 1, 0.05, (v) => setTr({ ...tr, amount: v }, false))}{range(t.fade, tr.fade, 0, 1, 0.05, (v) => setTr({ ...tr, fade: v }, false))}</>}
         {tr.type === 'warm' && range(t.amount, tr.amount, 0, 1.5, 0.05, (v) => setTr({ ...tr, amount: v }, false))}
         {tr.type === 'halftone' && range(t.dotSize, tr.dot, 2, 20, 0.5, (v) => setTr({ ...tr, dot: v }, false))}
+        {tr.type === 'posterize' && range(t.levels, tr.levels, 2, 8, 1, (v) => setTr({ ...tr, levels: v }, false))}
+        {tr.type === 'grade' && <>{range(t.amount, tr.amount, 0, 1, 0.05, (v) => setTr({ ...tr, amount: v }, false))}{range(t.contrast, tr.contrast, 0.5, 2, 0.05, (v) => setTr({ ...tr, contrast: v }, false))}{range(t.fade, tr.fade, 0, 1, 0.05, (v) => setTr({ ...tr, fade: v }, false))}</>}
+        {tr.type === 'paint' && (
+          <>
+            <div className="col-row">{(['neon', 'ocean', 'sunset'] as const).map((sc) => chip(tr.scheme === sc, t[('scheme' + sc[0].toUpperCase() + sc.slice(1)) as 'schemeNeon'], () => setTr({ ...tr, scheme: sc }), sc))}</div>
+            {range(t.lines, tr.lines, 0, 1, 0.05, (v) => setTr({ ...tr, lines: v }, false))}
+          </>
+        )}
         {tr.type === 'overlay' && (
           <>
             <div className="col-row">{(['multiply', 'screen', 'overlay', 'source-over'] as const).map((m) => chip(tr.mode === m, m === 'source-over' ? 'normal' : m, () => setTr({ ...tr, mode: m }), m))}</div>
@@ -710,6 +851,7 @@ export default function CollageApp({ lang, appT, isMobile, showToast, onClose }:
           </div>
         )}
         <div className="col-row"><span className="col-label">{t.frame}</span>{frames.map(([f, label]) => chip(pl.frame === f, label, () => mutate((d) => { const l = d.layers.find((x) => x.id === pl.id) as PhotoLayer; l.frame = f; if (f === 'booth' || f === 'film' || f === 'white') l.framePaint = l.framePaint ?? { slot: 'frame' }; }), f))}</div>
+        {sel?.kind === 'subject' ? paramControls(sel) : paramControls(pl)}
         {pl.frame === 'white' && range(t.margin, pl.frameMargin ?? 0.06, 0.01, 0.2, 0.01, (v) => setL<PhotoLayer>(pl.id, (l) => { l.frameMargin = v; }))}
         <label className="btn small file">
           {t.changePhoto}
@@ -734,17 +876,31 @@ export default function CollageApp({ lang, appT, isMobile, showToast, onClose }:
     const b = doc!.layers.find((l) => l.kind === 'background') as BackgroundLayer | undefined;
     if (!b) return null;
     const setB = (fn: (l: BackgroundLayer) => void, record = true) => mutate((d) => { fn(d.layers.find((l) => l.id === b.id) as BackgroundLayer); }, record);
-    const styles: [BackgroundLayer['style'], string][] = [['solid', t.bgSolid], ['stripes', t.bgStripes], ['split', t.bgSplit], ['crayon', t.bgCrayon], ['sky', t.bgSky], ['desktop', t.bgDesktop], ['photo', t.bgPhoto]];
-    const textures: [Texture, string][] = [['none', t.texNone], ['felt', t.texFelt], ['kraft', t.texKraft], ['watercolor', t.texWatercolor], ['poster', t.texPoster], ['recycled', t.texRecycled], ['folds', t.texFolds], ['fabric', t.texFabric], ['crayon', t.texCrayon]];
+    const styles: [BackgroundLayer['style'], string][] = [['solid', t.bgSolid], ['stripes', t.bgStripes], ['split', t.bgSplit], ['crayon', t.bgCrayon], ['sky', t.bgSky], ['desktop', t.bgDesktop], ['photo', t.bgPhoto],
+      ['quilt', t.bgQuilt], ['comic', t.bgComic], ['ghost', t.bgGhost], ['sunburst', t.bgSunburst], ['torn', t.bgTorn], ['journal', t.bgJournal]];
+    const textures: [Texture, string][] = [['none', t.texNone], ['felt', t.texFelt], ['kraft', t.texKraft], ['watercolor', t.texWatercolor], ['poster', t.texPoster], ['recycled', t.texRecycled], ['folds', t.texFolds], ['fabric', t.texFabric], ['crayon', t.texCrayon],
+      ['crumpled', t.texCrumpled], ['notebook', t.texNotebook], ['newsprint', t.texNewsprint], ['canvas', t.texCanvas], ['oil', t.texOil]];
     return (
       <>
-        <div className="col-row">{styles.map(([s, label]) => chip(b.style === s || (s === 'desktop' && b.style === 'desktop3d'), label, () => setB((l) => { l.style = s; if (!l.paint2) l.paint2 = { slot: 'backgroundSecondary' }; if (s === 'sky' || s === 'desktop') l.paint3 = l.paint3 ?? { slot: 'paper' }; }), s))}</div>
+        <div className="col-row">{styles.map(([s, label]) => chip(b.style === s || (s === 'desktop' && b.style === 'desktop3d'), label, () => setB((l) => {
+          l.style = s;
+          if (!l.paint2) l.paint2 = { slot: 'backgroundSecondary' };
+          if (s === 'sky' || s === 'desktop' || s === 'torn') l.paint3 = l.paint3 ?? { slot: 'paper' };
+          if (s === 'quilt' && !l.paints) l.paints = [{ slot: 'background' }, { slot: 'backgroundSecondary' }, { slot: 'starPrimary' }, { slot: 'doodleFill' }, { slot: 'tint' }];
+          if (s === 'sunburst' && l.texture === 'none') l.texture = 'crumpled';
+        }), s))}</div>
         <div className="col-row">
           {swatchBtn(b.paint, { kind: 'paint', layer: b.id, index: paintsOf(b).indexOf(b.paint) }, slotName(lang, b.paint.slot ?? 'background'))}
-          {(b.style === 'stripes' || b.style === 'split' || b.style.startsWith('desktop')) && b.paint2 && swatchBtn(b.paint2, { kind: 'paint', layer: b.id, index: paintsOf(b).indexOf(b.paint2) }, slotName(lang, b.paint2.slot ?? 'backgroundSecondary'))}
+          {b.style === 'quilt' && (b.paints ?? []).map((p, i) => <span key={i}>{swatchBtn(p, { kind: 'paint', layer: b.id, index: paintsOf(b).indexOf(p) }, slotName(lang, p.slot ?? ''))}</span>)}
+          {(b.style === 'torn') && b.paint3 && swatchBtn(b.paint3, { kind: 'paint', layer: b.id, index: paintsOf(b).indexOf(b.paint3) }, slotName(lang, b.paint3.slot ?? 'paper'))}
+          {(b.style === 'stripes' || b.style === 'split' || b.style === 'sunburst' || b.style.startsWith('desktop')) && b.paint2 && swatchBtn(b.paint2, { kind: 'paint', layer: b.id, index: paintsOf(b).indexOf(b.paint2) }, slotName(lang, b.paint2.slot ?? 'backgroundSecondary'))}
           {(b.style === 'sky' || b.style.startsWith('desktop')) && b.paint3 && swatchBtn(b.paint3, { kind: 'paint', layer: b.id, index: paintsOf(b).indexOf(b.paint3) }, slotName(lang, b.paint3.slot ?? 'paper'))}
         </div>
-        {(b.style === 'solid' || b.style === 'stripes' || b.style === 'split') && <div className="col-row"><span className="col-label">{t.texture}</span>{textures.map(([x, label]) => chip(b.texture === x, label, () => setB((l) => { l.texture = x; }), x))}</div>}
+        {(b.style === 'solid' || b.style === 'stripes' || b.style === 'split' || b.style === 'sunburst') && <div className="col-row"><span className="col-label">{t.texture}</span>{textures.map(([x, label]) => chip(b.texture === x, label, () => setB((l) => { l.texture = x; }), x))}</div>}
+        {b.style === 'photo' && <div className="col-row"><span className="col-label">{t.texture}</span>{textures.map(([x, label]) => chip((b.overlay ?? 'none') === x, label, () => setB((l) => { l.overlay = x === 'none' ? undefined : x; }), x))}</div>}
+        {b.style === 'ghost' && <>{range(t.cols, b.tiles ?? 4, 2, 8, 1, (v) => setB((l) => { l.tiles = v; }, false))}{range(t.blur, b.blur ?? 6, 0, 30, 1, (v) => setB((l) => { l.blur = v; }, false))}</>}
+        {b.style === 'quilt' && <div className="col-row">{chip(b.felt !== false, t.stickersFelt, () => setB((l) => { l.felt = l.felt === false; }))}</div>}
+        {(b.style === 'comic' || b.style === 'torn' || b.style === 'journal') && range(t.shuffle, b.seed ?? 12, 1, 60, 1, (v) => setB((l) => { l.seed = v; }, false))}
         {b.style === 'stripes' && <>{range(t.stripeWidth, b.stripeWidth ?? 0.07, 0.02, 0.25, 0.005, (v) => setB((l) => { l.stripeWidth = v; }, false))}{range(t.angle, b.stripeAngle ?? 0, -90, 90, 1, (v) => setB((l) => { l.stripeAngle = v; }, false))}</>}
         {b.style === 'photo' && <>{range(t.blur, b.blur ?? 0, 0, 40, 1, (v) => setB((l) => { l.blur = v; }, false))}<div className="col-row">{chip(!!b.bw, t.bw, () => setB((l) => { l.bw = !l.bw; }))}</div></>}
         <div className="col-row">{chip(b.folds === 'grid', t.texFolds, () => setB((l) => { l.folds = l.folds === 'grid' ? 'none' : 'grid'; }))}</div>
@@ -780,6 +936,30 @@ export default function CollageApp({ lang, appT, isMobile, showToast, onClose }:
             <button key={label} type="button" className="col-add" onClick={fn}><span>{ico}</span>{label}</button>
           ))}
         </div>
+        <div className="col-row"><span className="col-label">{t.tools}</span></div>
+        <div className="col-add-grid">
+          {TOOLS.map((tool) => (
+            <button key={tool.id} type="button" className="col-add" disabled={tool.needsPhoto && !subjectPhotoId()} onClick={() => {
+              const layer = tool.make({ id: uid(), photo: subjectPhotoId(), t });
+              // Full canvas effects go right above the photos, the rest on top.
+              const below = layer.kind === 'scribble' || (layer.kind === 'waves' && layer.mode === 'contour') || (layer.kind === 'zigzag');
+              addLayer(layer, !below);
+            }}><span>{tool.icon}</span>{t[tool.label] as string}</button>
+          ))}
+        </div>
+        {STICKER_GROUPS.map((g) => (
+          <div key={g.id}>
+            <div className="col-row"><span className="col-label">{g.id === 'felt' ? t.stickersFelt : g.id === 'nature' ? t.stickersNature : g.id === 'craft' ? t.stickersCraft : t.stickersPack}</span></div>
+            <div className="col-sticker-grid">
+              {g.arts.map((art) => (
+                <button key={art} type="button" className="col-sticker" aria-label={stickerName(lang, art)} title={stickerName(lang, art)} onClick={() => addSticker(art)}>
+                  <StickerThumb art={art} />
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+        <p className="note">{t.stickerHint}</p>
         <div className="col-row">
           <span className="col-label">{t.scatter}</span>
           {range('N', scatterN, 4, 40, 1, setScatterN)}
@@ -814,6 +994,8 @@ export default function CollageApp({ lang, appT, isMobile, showToast, onClose }:
             {range(t.width, s.width, 2, 30, 1, (v) => setL<Layer>(s.id, (x) => { (x as typeof s).width = v; }))}
           </>
         )}
+        {s && s.kind === 'heads' && headsControls(s as HeadsLayer)}
+        {s && s.kind !== 'photo' && s.kind !== 'subject' && paramControls(s)}
         {s && s.kind === 'ui' && (s.widget === 'dialog' || s.widget === 'icon' || s.widget === 'file' || s.widget === 'folder') && (
           <div className="col-fields">
             {s.widget === 'dialog' ? (
@@ -852,14 +1034,24 @@ export default function CollageApp({ lang, appT, isMobile, showToast, onClose }:
           <button type="button" className="col-chip on" onClick={() => addLayer({ id: uid(), kind: 'text', text: t.defaultText, font: 'script', paint: { slot: 'text' }, size: 0.07, x: 0.5, y: 0.85, w: 0.4, rot: -4 } as TextLayer)}>＋ {t.addText}</button>
           <button type="button" className="col-chip on" onClick={() => addLayer({ id: uid(), kind: 'tiles', text: t.defaultWord, tiles: [{ slot: 'paper' }, { slot: 'tintSecondary' }, { slot: 'starPrimary' }], letters: [{ slot: 'tint' }, { slot: 'doodleStroke' }], x: 0.5, y: 0.12, w: 0.5, rot: -3, seed: Math.floor(Math.random() * 999) })}>＋ {t.addLetters}</button>
           <button type="button" className="col-chip on" onClick={() => addLayer({ id: uid(), kind: 'pattern', word: t.defaultWord, paint: { slot: 'text' }, rows: 8, x: 0.5, y: 0.5, w: 0.9, h: 0.5, rot: 0 }, false)}>＋ {t.addPattern}</button>
+          <button type="button" className="col-chip on" onClick={() => addLayer({ id: uid(), kind: 'text', text: t.defaultTitle, font: 'brush', paint: { slot: 'starPrimary' }, stroke: { color: '#FFFFFF' }, strokeWidth: 14, texture: 'paper', size: 0.11, x: 0.5, y: 0.14, w: 0.6, rot: -4 } as TextLayer)}>＋ {t.titleTool}</button>
+          <button type="button" className="col-chip on" onClick={() => addLayer({ id: uid(), kind: 'text', text: t.defaultLabel, font: 'typewriter', paint: { color: '#111111' }, bg: { color: '#FFFFFF' }, bgStyle: 'tag', size: 0.035, x: 0.3, y: 0.8, w: 0.3, rot: -6 } as TextLayer)}>＋ {t.labelTool}</button>
+          <button type="button" className="col-chip on" onClick={() => addLayer({ id: uid(), kind: 'text', text: 'XOXO', font: 'typewriter', paint: { color: '#111111' }, bg: { slot: 'paper' }, bgStyle: 'tape', size: 0.035, x: 0.7, y: 0.9, w: 0.3, rot: 4 } as TextLayer)}>＋ {t.tapeTool}</button>
         </div>
         {s && (s.kind === 'text' || s.kind === 'tiles' || s.kind === 'pattern') && (
           <div className="col-fields">
             <textarea className="text-input" value={s.kind === 'pattern' ? s.word : s.text} onChange={(e) => setL<Layer>(s.id, (x) => { if (x.kind === 'pattern') x.word = e.target.value; else (x as TextLayer).text = e.target.value; })} />
             {s.kind === 'text' && (
               <>
-                <div className="col-row">{(['script', 'marker', 'pixel', 'sans', 'serif'] as const).map((f) => chip(s.font === f, t[('font' + f[0].toUpperCase() + f.slice(1)) as 'fontScript'], () => mutate((d) => { (d.layers.find((x) => x.id === s.id) as TextLayer).font = f; }), f))}</div>
+                <div className="col-row">{(['script', 'marker', 'pixel', 'sans', 'serif', 'brush', 'typewriter', 'display'] as const).map((f) => chip(s.font === f, t[('font' + f[0].toUpperCase() + f.slice(1)) as 'fontScript'], () => mutate((d) => { (d.layers.find((x) => x.id === s.id) as TextLayer).font = f; }), f))}</div>
                 {range(t.size, s.size, 0.02, 0.25, 0.005, (v) => setL<TextLayer>(s.id, (x) => { x.size = v; }))}
+                <div className="col-row">
+                  <span className="col-label">{t.textBg}</span>
+                  {chip(!s.bg, t.frameNone, () => mutate((d) => { const x = d.layers.find((y) => y.id === s.id) as TextLayer; delete x.bg; }), 'nobg')}
+                  {(['strip', 'tag', 'tape'] as const).map((b) => chip(!!s.bg && (s.bgStyle ?? 'strip') === b, t[('bg' + b[0].toUpperCase() + b.slice(1)) as 'bgStrip'], () => mutate((d) => { const x = d.layers.find((y) => y.id === s.id) as TextLayer; x.bg = x.bg ?? { slot: 'paper' }; x.bgStyle = b; }), b))}
+                </div>
+                <div className="col-row">{chip(!!s.stroke, t.outlineText, () => mutate((d) => { const x = d.layers.find((y) => y.id === s.id) as TextLayer; if (x.stroke) delete x.stroke; else { x.stroke = { color: '#FFFFFF' }; x.strokeWidth = x.strokeWidth ?? 12; } }))}</div>
+                {s.stroke && range(t.strokeWidth, s.strokeWidth ?? 12, 2, 40, 1, (v) => setL<TextLayer>(s.id, (x) => { x.strokeWidth = v; }))}
               </>
             )}
             {s.kind === 'pattern' && range(t.lines, s.rows, 3, 20, 1, (v) => setL<Layer>(s.id, (x) => { (x as typeof s).rows = v; }))}
@@ -928,6 +1120,26 @@ export default function CollageApp({ lang, appT, isMobile, showToast, onClose }:
       case 'zigzag': return t.zigzag;
       case 'outline': return t.autoOutline;
       case 'draw': return t.tabDraw;
+      case 'heads': return t.headsTool;
+      case 'bubble': return t.bubbleTool;
+      case 'torn': return t.tornTool;
+      case 'sketch': return t.sketchTool;
+      case 'scribble': return t.scribbleTool;
+      case 'cropwin': return t.cropTool;
+      case 'patchwork': return t.patchworkTool;
+      case 'layout': return t.layoutTool;
+      case 'boxes': return t.boxesTool;
+      case 'waves': return (l as { mode?: string }).mode === 'contour' ? t.liquidTool : t.wavesTool;
+      case 'sticker': return stickerName(lang, (l as StickerLayer).art);
+      case 'slices': return t.slicesTool;
+      case 'leak': return t.leakTool;
+      case 'grunge': return t.grungeTool;
+      case 'mosaic': return t.mosaicTool;
+      case 'ornament': return t.ornamentTool;
+      case 'punch': return t.punchTool;
+      case 'threshold': return t.thresholdTool;
+      case 'frost': return t.frostTool;
+      case 'facedoodle': return t.faceDoodleTool;
     }
     return '';
   }
@@ -972,7 +1184,7 @@ export default function CollageApp({ lang, appT, isMobile, showToast, onClose }:
         <div className="col-filters">
           {chip(filter === 'all', t.all, () => setFilter('all'))}
           {chip(filter === 'mine', `${t.mine} (${drafts.length})`, () => setFilter('mine'))}
-          {TAGS.map((tag) => chip(filter === tag, t[('tag' + tag[0].toUpperCase() + tag.slice(1)) as 'tagStars'], () => setFilter(tag), tag))}
+          {TAGS.filter((tag) => templates.some((x) => x.tags.includes(tag))).map((tag) => chip(filter === tag, t[('tag' + tag[0].toUpperCase() + tag.slice(1)) as 'tagStars'], () => setFilter(tag), tag))}
         </div>
         <div className="col-gallery">
           {filter === 'mine' && !drafts.length && <p className="note">{t.emptyMine}</p>}
@@ -983,7 +1195,7 @@ export default function CollageApp({ lang, appT, isMobile, showToast, onClose }:
             </div>
           ))}
           {list.map((tp) => (
-            <button key={tp.id} type="button" className="col-card col-card-btn" onClick={() => { setTemplate(tp); setPicked([null, null]); setScreen('pick'); }}>
+            <button key={tp.id} type="button" className="col-card col-card-btn" onClick={() => { setTemplate(tp); setPicked(Array(tp.photos).fill(null)); setScreen('pick'); }}>
               {previews[tp.id] ? <img src={previews[tp.id]} alt="" /> : <span className="thumb-ph" style={{ aspectRatio: String(RATIOS[tp.ratio as keyof typeof RATIOS] ?? 1) }} />}
               <span>{tp.name[lang] ?? tp.name.en}</span>
             </button>
@@ -999,7 +1211,7 @@ export default function CollageApp({ lang, appT, isMobile, showToast, onClose }:
       <div className="col-page">
         <header className="page-head">
           <button type="button" className="page-back" aria-label={appT.back} onClick={() => setScreen('gallery')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg></button>
-          <div className="page-title"><span>{template.name[lang] ?? template.name.en}</span><small>{template.photos === 2 ? t.pickPhotos : t.pickPhoto}</small></div>
+          <div className="page-title"><span>{template.name[lang] ?? template.name.en}</span><small>{template.photos > 1 ? t.pickPhotos.replace('{n}', String(template.photos)) : t.pickPhoto}</small></div>
           <span className="page-spacer" />
         </header>
         <div className="col-pick">
@@ -1021,9 +1233,10 @@ export default function CollageApp({ lang, appT, isMobile, showToast, onClose }:
               </label>
             ))}
           </div>
-          <button type="button" className="welcome-cta col-start" disabled={!picked[0] || !!busy} onClick={() => startWith(template, picked)}>{t.start}</button>
-          <button type="button" className="welcome-demo" disabled={!!busy} onClick={async () => { const s = await loadSample(); startWith(template, [s, null]); }}>{t.sample}</button>
+          <button type="button" className="welcome-cta col-start" disabled={!picked[0] || !!busy} onClick={() => askFilter(template, picked)}>{t.start}</button>
+          <button type="button" className="welcome-demo" disabled={!!busy} onClick={async () => { const s = await loadSample(); askFilter(template, [s, null]); }}>{t.sample}</button>
         </div>
+        {filterAsk && filterSheet(template)}
         {busy && <div className="col-busy"><span className="col-spinner" />{busy}</div>}
       </div>
     );
@@ -1115,6 +1328,23 @@ export default function CollageApp({ lang, appT, isMobile, showToast, onClose }:
       {busy && <div className="col-busy"><span className="col-spinner" />{busy}</div>}
     </div>
   );
+}
+
+/** Library button preview of one sticker art. */
+function StickerThumb({ art }: { art: StickerArt }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const c = ref.current;
+    if (!c) return;
+    const s = 56 * Math.min(2, window.devicePixelRatio || 1);
+    c.width = s; c.height = s;
+    const ctx = c.getContext('2d')!;
+    const k = Math.min(1, 1 / (STICKER_ASPECT[art] ?? 1));
+    ctx.translate(s / 2, s / 2);
+    const [c1, c2] = STICKER_DEFAULTS[art];
+    try { drawStickerArt(ctx, art, s * 0.8 * k, c1, c2, 1); } catch { /* preview only */ }
+  }, [art]);
+  return <canvas ref={ref} aria-hidden="true" />;
 }
 
 /** Small thumbnail of one layer for the Layers panel. */

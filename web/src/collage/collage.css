@@ -78,6 +78,11 @@
 .col-add-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)); gap: 6px; }
 .col-add { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px; border-radius: 14px; border: 1px solid var(--border-soft); background: var(--surface-2); color: var(--text); font-size: 11px; font-weight: 600; text-align: center; line-height: 1.2; }
 .col-add span { font-size: 22px; color: var(--wine-3); line-height: 1; }
+.col-add:disabled { opacity: 0.4; }
+.col-sticker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); gap: 6px; margin-bottom: 6px; }
+.col-sticker { aspect-ratio: 1; padding: 4px; border-radius: 12px; border: 1px solid var(--border-soft); background: var(--surface-2); display: flex; align-items: center; justify-content: center; }
+.col-sticker canvas { width: 100%; height: 100%; }
+.col-sticker:active { transform: scale(0.94); }
 .col-add:active { transform: scale(0.95); }
 
 .col-tpl-strip { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
@@ -128,3 +133,8 @@
   .col-editor .col-panel { grid-column: 2; grid-row: 2; max-height: none; }
   .col-editor .col-tabs { grid-column: 2; grid-row: 4; flex-wrap: wrap; }
 }
+.col-filter-strip { display: flex; gap: 6px; overflow-x: auto; padding: 4px 0 8px; scrollbar-width: thin; }
+.col-filter-strip .col-chip { flex: 0 0 auto; }
+.col-filter-sheet { max-width: 420px; }
+.col-filter-options { display: flex; flex-direction: column; gap: 8px; }
+.col-filter-sheet .col-filter-strip { flex-wrap: wrap; max-height: 50vh; overflow-y: auto; }

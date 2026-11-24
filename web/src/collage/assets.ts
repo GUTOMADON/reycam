@@ -13,7 +13,10 @@ export const FONTS: Record<string, string> = {
   marker: "'Marker Felt', 'Permanent Marker', 'Comic Sans MS', 'Chalkboard SE', cursive",
   pixel: "VT323, 'Courier New', monospace",
   sans: "Inter, system-ui, sans-serif",
-  serif: "Georgia, 'Times New Roman', serif"
+  serif: "Georgia, 'Times New Roman', serif",
+  brush: "'Space Grotesk', 'Arial Black', Impact, 'Helvetica Neue', sans-serif",
+  typewriter: "'American Typewriter', 'Courier New', Courier, monospace",
+  display: "'Space Grotesk', 'Arial Black', 'Trebuchet MS', sans-serif"
 };
 
 const TAU = Math.PI * 2;
@@ -97,6 +100,127 @@ export function shapePath(ctx: CanvasRenderingContext2D, kind: ShapeKind, size: 
       }
       break;
     }
+    case 'bolt': {
+      const pts: [number, number][] = [[0.18, -1], [-0.5, 0.12], [-0.02, 0.12], [-0.22, 1], [0.5, -0.18], [0.04, -0.18], [0.3, -1]];
+      pts.forEach(([px, py], i) => (i ? ctx.lineTo(px * r, py * r) : ctx.moveTo(px * r, py * r)));
+      ctx.closePath();
+      break;
+    }
+    case 'bar': {
+      // Dry brush stroke: a long rough band, thicker in the middle.
+      const h = (o.h ?? 0.2) * size;
+      const n = 24;
+      for (let i = 0; i <= n; i++) { const t = i / n; ctx.lineTo(-r + t * size, -h / 2 * (0.7 + Math.sin(t * Math.PI) * 0.3) + (rand() - 0.5) * h * 0.25); }
+      for (let i = n; i >= 0; i--) { const t = i / n; ctx.lineTo(-r + t * size + (i === 0 ? -rand() * h * 0.4 : 0), h / 2 * (0.7 + Math.sin(t * Math.PI) * 0.3) + (rand() - 0.5) * h * 0.25); }
+      ctx.closePath();
+      break;
+    }
+    case 'exclaim': {
+      ctx.moveTo(-r * 0.22, -r); ctx.lineTo(r * 0.22, -r); ctx.lineTo(r * 0.1, r * 0.4); ctx.lineTo(-r * 0.1, r * 0.4); ctx.closePath();
+      ctx.moveTo(r * 0.16, r * 0.78); ctx.arc(0, r * 0.78, r * 0.16, 0, TAU);
+      break;
+    }
+    case 'crown': {
+      const n = o.points ?? 5;
+      ctx.moveTo(-r, r * 0.5);
+      for (let i = 0; i <= n * 2; i++) { const x = -r + (i / (n * 2)) * size; ctx.lineTo(x, i % 2 ? -r * (0.2 + rand() * 0.2) : -r * (0.9 + rand() * 0.1)); }
+      ctx.lineTo(r, r * 0.5);
+      ctx.closePath();
+      break;
+    }
+    case 'splat': {
+      const n = 14;
+      for (let i = 0; i <= n; i++) {
+        const a = (i / n) * TAU, rad = r * (i % 2 ? 0.55 + rand() * 0.15 : 0.75 + rand() * 0.25);
+        i ? ctx.lineTo(Math.cos(a) * rad, Math.sin(a) * rad) : ctx.moveTo(Math.cos(a) * rad, Math.sin(a) * rad);
+      }
+      ctx.closePath();
+      for (let i = 0; i < 5; i++) { const a = rand() * TAU, d = r * (1.05 + rand() * 0.25), s = r * (0.05 + rand() * 0.08); ctx.moveTo(Math.cos(a) * d + s, Math.sin(a) * d); ctx.arc(Math.cos(a) * d, Math.sin(a) * d, s, 0, TAU); }
+      break;
+    }
+    case 'checker': {
+      const n = o.points ?? 5, c = size / n;
+      for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) if ((i + j) % 2 === 0) ctx.rect(-r + i * c, -r + j * c, c, c);
+      break;
+    }
+    case 'squiggle': {
+      const n = o.points ?? 6;
+      for (let i = 0; i <= n * 8; i++) { const t = i / (n * 8); const x = -r + t * size, y = Math.sin(t * n * TAU) * r * 0.25; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+      break;
+    }
+    case 'sun': {
+      // Spiral center and wavy rays, drawn as one line shape.
+      for (let t = 0; t <= 1; t += 0.02) { const a = t * TAU * 2.2, rad = r * 0.4 * t; t === 0 ? ctx.moveTo(0, 0) : ctx.lineTo(Math.cos(a) * rad, Math.sin(a) * rad); }
+      const n = o.points ?? 10;
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * TAU + rand() * 0.15;
+        for (let k = 0; k <= 10; k++) {
+          const d = r * (0.55 + (k / 10) * 0.45), w = Math.sin(k * 1.4) * r * 0.05;
+          const x = Math.cos(a) * d - Math.sin(a) * w, y = Math.sin(a) * d + Math.cos(a) * w;
+          k ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+        }
+      }
+      break;
+    }
+    case 'loop': {
+      // Crayon loops: a line with three overlapping curls.
+      for (let t = 0; t <= 1; t += 0.01) { const a = t * TAU * 3; const x = -r + t * size + Math.cos(a) * r * 0.22, y = Math.sin(a) * r * 0.35; t === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+      break;
+    }
+    case 'cross':
+      ctx.moveTo(-r, -r); ctx.lineTo(r, r); ctx.moveTo(r, -r); ctx.lineTo(-r, r);
+      break;
+    case 'oval': {
+      const h = (o.h ?? 0.5) * size;
+      for (let t = 0; t <= 1.08; t += 0.02) { const a = t * TAU; const x = Math.cos(a) * r * (1 + t * 0.04), y = Math.sin(a) * h / 2; t === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+      break;
+    }
+    case 'spiky': {
+      // Tall uneven spikes like grass or a jagged crown, base at the bottom.
+      const n = o.points ?? 9;
+      const h = (o.h ?? 0.8) * size;
+      ctx.moveTo(-r, h / 2);
+      for (let i = 0; i < n; i++) {
+        const x0 = -r + (i / n) * size, x1 = -r + ((i + 1) / n) * size;
+        ctx.lineTo((x0 + x1) / 2 + (rand() - 0.5) * size / n, -h / 2 + rand() * h * 0.45);
+        ctx.lineTo(x1, h / 2 - rand() * h * 0.2);
+      }
+      ctx.lineTo(r, h / 2);
+      ctx.closePath();
+      break;
+    }
+    case 'tornStrip': {
+      // Paper strip with torn top and bottom edges (divider between photos).
+      const h = (o.h ?? 0.06) * size;
+      const n = 40;
+      for (let i = 0; i <= n; i++) ctx.lineTo(-r + (i / n) * size, -h / 2 + (rand() - 0.5) * h * 0.6 * (1 + wob));
+      for (let i = n; i >= 0; i--) ctx.lineTo(-r + (i / n) * size, h / 2 + (rand() - 0.5) * h * 0.6 * (1 + wob));
+      ctx.closePath();
+      break;
+    }
+    case 'grid3': {
+      // Camera rule of thirds lines.
+      const h = (o.h ?? 1) * size;
+      for (const k of [-1 / 6, 1 / 6]) { ctx.moveTo(k * size, -h / 2); ctx.lineTo(k * size, h / 2); ctx.moveTo(-r, k * h); ctx.lineTo(r, k * h); }
+      ctx.rect(-r, -h / 2, size, h);
+      break;
+    }
+    case 'spiral2': {
+      // Hand drawn spiral in two parallel lines.
+      for (const k of [1, 0.86]) {
+        let first = true;
+        for (let t = 0.05; t <= 1; t += 0.015) { const a = t * TAU * 2.6, d = r * t * k; first ? ctx.moveTo(Math.cos(a) * d, Math.sin(a) * d) : ctx.lineTo(Math.cos(a) * d, Math.sin(a) * d); first = false; }
+      }
+      break;
+    }
+    case 'corners': {
+      const h = (o.h ?? 1) * size, l = Math.min(size, h) * 0.18;
+      for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+        const cx = sx * r, cy = sy * h / 2;
+        ctx.moveTo(cx, cy - sy * l); ctx.lineTo(cx, cy); ctx.lineTo(cx - sx * l, cy);
+      }
+      break;
+    }
   }
 }
 
@@ -113,7 +237,8 @@ function roundedPoly(ctx: CanvasRenderingContext2D, pts: [number, number][], rad
 }
 
 /** Open shapes are stroked only. */
-export const isLineShape = (k: ShapeKind) => k === 'asterisk' || k === 'swirl' || k === 'ring';
+export const isLineShape = (k: ShapeKind) =>
+  k === 'asterisk' || k === 'swirl' || k === 'ring' || k === 'squiggle' || k === 'sun' || k === 'loop' || k === 'cross' || k === 'oval' || k === 'corners' || k === 'grid3' || k === 'spiral2';
 
 /**
  * Fill style for a star material. Holographic stars shift their rainbow over
