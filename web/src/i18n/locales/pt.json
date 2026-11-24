@@ -257,7 +257,11 @@
     "copyLink": "Copiar link",
     "linkCopied": "Link copiado. Cole no Safari",
     "heicConverting": "Convertendo foto HEIC…",
-    "hevcNote": "Este navegador não reproduz este vídeo (HEVC / Alta Eficiência). Abra o ReyCam no Safari ou no celular, ou no iPhone use Ajustes → Câmera → Formatos → Mais Compatível."
+    "hevcNote": "Este navegador não reproduz este vídeo (HEVC / Alta Eficiência). Abra o ReyCam no Safari ou no celular, ou no iPhone use Ajustes → Câmera → Formatos → Mais Compatível.",
+    "catLu": "LU",
+    "featured": "Destaque",
+    "quickAdjust": "Ajustes rápidos",
+    "maskLoading": "Detectando a pessoa…"
   },
   "looks": {
     "original": "Sem câmera, só os seus ajustes",
@@ -389,6 +393,30 @@
     "cereja-noir": "Vermelho cereja com pretos esmagados",
     "rose": "Rosé claro, suave e romântico",
     "merlot-film": "Filme desbotado com sombras cor de vinho",
-    "veludo": "Vinho aveludado com brilho suave"
+    "veludo": "Vinho aveludado com brilho suave",
+    "lu-haze": "Selfie no espelho sonhadora e lavada, com névoa rosa lilás, brilho suave e granulação colorida",
+    "lu-flash": "Flash direto editorial em filme quente, parede creme, cabelo acobreado e pretos foscos",
+    "lu-glitter": "Retrato rosa empoeirado com parede de glitter holográfico e estrelas de luz",
+    "lu-neon": "Fotos noturnas banhadas em neon vermelho com sombras pretas azuladas",
+    "lu-angel": "Filme noturno de Hong Kong dos anos 90, sombras verde-azuladas e halo suave",
+    "lu-cry": "Impressão de zine em duas tintas, índigo sobre papel creme com pontinhos de fotocópia",
+    "lu-lazuli": "Serigrafia em três tons: preto, azul lápis-lazúli e creme",
+    "lu-pop": "Pôster magenta e violeta com retícula",
+    "lu-sunset": "Banho Y2K rosa e roxo, altas luzes leitosas e brilho suave",
+    "lu-green": "Verde ácido de processo cruzado com pretos sólidos",
+    "lu-blue": "Selfie azul gelado de câmera digital com brancos estourados",
+    "lu-vision": "Duotom azul-petróleo e mostarda com retícula fina",
+    "lu-alien": "Leitura térmica em cores falsas com faixas posterizadas",
+    "lu-adrenaline": "Flash cru de câmera digital dos anos 2000, frio e nítido",
+    "lu-retro": "Foto de interior quente dos anos 70 em âmbar e mel",
+    "lu-capture": "Filme com flash dos anos 90 com poeira, riscos e bordas desbotadas",
+    "lu-vhs": "Flash de festa gravado em fita, cor vazando, linhas de varredura e brilho",
+    "lu-vintage": "Filme de rua rosa desbotado com foco suave e granulação forte",
+    "gu-candle": "Evento à luz de velas, sombras de chocolate, altas luzes âmbar e vermelhos vinho",
+    "gu-soiree": "Retrato de grupo dourado e suave, pele luminosa e brancos creme",
+    "gu-amber": "Selfie no espelho em âmbar mel, quase um monocromático quente",
+    "gu-bronze": "Visual de academia escuro em bronze e sépia com brilhos dourados",
+    "gu-ember": "Selfie noturna em luz laranja quente, tons de ferrugem e ruído suave",
+    "gu-dusk": "Hora azul subexposta, céu ardósia e prédios em tons quentes apagados"
   }
 }

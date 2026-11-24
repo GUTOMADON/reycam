@@ -31,6 +31,12 @@ export const RATIOS: Record<Exclude<Ratio, 'free'>, number> = {
   '6:7': 6 / 7, '3:5': 3 / 5, '6:5': 6 / 5
 };
 
+/** Effective filter of a photo slot: its own override (null = no filter), else the collage filter. */
+export function slotFilter(doc: Pick<CollageDoc, 'filter' | 'slotFilters'>, index: number) {
+  const own = doc.slotFilters?.[index];
+  return own !== undefined ? own : doc.filter ?? null;
+}
+
 export const aspectOf = (doc: Pick<CollageDoc, 'ratio' | 'freeAspect'>) => (doc.ratio === 'free' ? doc.freeAspect || 1 : RATIOS[doc.ratio]);
 
 /** Canvas size for a long side in pixels. */
@@ -117,7 +123,7 @@ function cutout(p: CollagePhoto, layer: PhotoLayer, treatment: Treatment | undef
   const outH = Math.max(1, Math.round(outW / crop.aspect));
   const ow = Math.round(st.style === 'clean' || st.style === 'silhouette' ? 0 : st.outlineWidth * unit);
   const pad = ow + Math.round(st.shadow ? 18 * unit : 2);
-  const key = [p.id, maskVersion(p.mask), JSON.stringify(treatment), Math.round(outW / 8), JSON.stringify(st), photoFilterKey(), crop.sx | 0, crop.sy | 0, crop.sw | 0, photoMax, treatment ? JSON.stringify(palette) : ''].join('|');
+  const key = [p.id, maskVersion(p.mask), JSON.stringify(treatment), Math.round(outW / 8), JSON.stringify(st), photoFilterKey(p.id), crop.sx | 0, crop.sy | 0, crop.sw | 0, photoMax, treatment ? JSON.stringify(palette) : ''].join('|');
   const hit = cutCache.get(key);
   if (hit) return hit;
 
@@ -198,8 +204,15 @@ export function renderCollage(ctx: CanvasRenderingContext2D, doc: CollageDoc, ph
     begin: (c, l, w, h) => begin(c, l, w, h),
     subjectMask: (c, pl, p) => drawSubjectMask(c, pl, p, W, H)
   };
-  const f = doc.filter;
-  setPhotoFilter(f && f.intensity > 0 ? { key: f.id + ':' + f.intensity, apply: (src, key) => applyLook(src, key, f.id, f.intensity) } : null);
+  // Filter per photo slot (slot override first, then the collage default). Photos are
+  // filtered before the template treatment; stickers, text and UI never see the filter.
+  const byPhoto = new Map<string, { id: string; intensity: number } | null>();
+  photos.forEach((p, i) => { if (!byPhoto.has(p.id)) byPhoto.set(p.id, slotFilter(doc, i)); });
+  const active = [...byPhoto.values()].some((f) => f && f.intensity > 0);
+  setPhotoFilter(active ? {
+    keyFor: (k) => { const f = byPhoto.get(k); return f && f.intensity > 0 ? f.id + ':' + f.intensity : ''; },
+    apply: (src, k) => { const f = byPhoto.get(k)!; return applyLook(src, k, f.id, f.intensity); }
+  } : null);
   try {
   ctx.save();
   ctx.clearRect(0, 0, W, H);
@@ -474,6 +487,7 @@ export function renderCollage(ctx: CanvasRenderingContext2D, doc: CollageDoc, ph
         c.drawImage(off, x - pad, y - pad);
       } else {
       if (l.cutout === 'window') { windowPath(); c.clip(); }
+      else if (l.radius) { c.beginPath(); c.roundRect(x, y, b.w, b.h, l.radius * unit); c.clip(); }
       if (l.rgbSplit) {
         // RGB split glow: red and blue copies shifted under the photo.
         const d = l.rgbSplit * unit;

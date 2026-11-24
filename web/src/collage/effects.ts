@@ -94,7 +94,7 @@ function drawPhotoAt(env: FxEnv, c: CanvasRenderingContext2D, pl: PhotoLayer, p:
 }
 
 /** Draw a treated photo cover cropped into a rectangle, centered on a feature. */
-function coverInto(env: FxEnv, c: CanvasRenderingContext2D, p: CollagePhoto, t: Treatment | undefined, x: number, y: number, w: number, h: number, anchor?: Anchor, index = 0, zoom = 1, blur = 0) {
+function coverInto(env: FxEnv, c: CanvasRenderingContext2D, p: CollagePhoto, t: Treatment | undefined, x: number, y: number, w: number, h: number, anchor?: Anchor, index = 0, zoom = 1, blur = 0, focus?: [number, number]) {
   const img = treatPhoto(p.image, p.id, t, env.pal, Math.min(env.photoMax, 1600));
   const iw = p.image.width, ih = p.image.height;
   const A = w / h;
@@ -106,6 +106,7 @@ function coverInto(env: FxEnv, c: CanvasRenderingContext2D, p: CollagePhoto, t: 
     const pt = pts[index % pts.length];
     if (pt) { cx = pt.x * iw; cy = pt.y * ih; }
   }
+  if (focus) { cx = focus[0] * iw; cy = focus[1] * ih; }
   const sx = Math.max(0, Math.min(iw - sw, cx - sw / 2)), sy = Math.max(0, Math.min(ih - sh, cy - sh / 2));
   const kx = img.width / iw;
   c.save();
@@ -612,8 +613,8 @@ export function drawLayout(env: FxEnv, c: CanvasRenderingContext2D, l: LayoutLay
       c.translate(cell.x + cell.w / 2, cell.y + cell.h / 2);
       c.rotate((l.cellRot * Math.PI) / 180);
       const sw = Math.abs(l.cellRot) % 180 === 90 ? cell.h : cell.w, sh = Math.abs(l.cellRot) % 180 === 90 ? cell.w : cell.h;
-      coverInto(env, c, p, l.treatment, -sw / 2, -sh / 2, sw, sh, spec.anchor, Math.floor(i / Math.max(1, l.cells.length)), spec.zoom ?? 1, spec.blur ? 4 * u : 0);
-    } else coverInto(env, c, p, l.treatment, cell.x, cell.y, cell.w, cell.h, spec.anchor, Math.floor(i / Math.max(1, l.cells.length)), spec.zoom ?? 1, spec.blur ? 4 * u : 0);
+      coverInto(env, c, p, l.treatment, -sw / 2, -sh / 2, sw, sh, spec.anchor, Math.floor(i / Math.max(1, l.cells.length)), spec.zoom ?? 1, spec.blur ? 4 * u : 0, spec.focus);
+    } else coverInto(env, c, p, l.treatment, cell.x, cell.y, cell.w, cell.h, spec.anchor, Math.floor(i / Math.max(1, l.cells.length)), spec.zoom ?? 1, spec.blur ? 4 * u : 0, spec.focus);
     c.restore();
     if (l.scanlines) scanlines(c, cell.x, cell.y, cell.w, cell.h, l.scanlines, u);
   });
