@@ -65,12 +65,37 @@ export function applyLook(src: HTMLCanvasElement, key: string, lookId: string, i
   const k = `${key}|${lookId}|${intensity}|${src.width}`;
   const hit = cache.get(k);
   if (hit) return hit;
-  if (glFailed) return src;
+  const out = runLook(src, lookId, intensity) ?? runLook(src, lookId, intensity, true);
+  if (!out) {
+    // Never fail silently: the editor shows a message and keeps the unfiltered photo.
+    filterFailed = true;
+    failListeners.forEach((fn) => fn());
+    return src;
+  }
+  if (cache.size > 16) cache.delete(cache.keys().next().value as string);
+  cache.set(k, out);
+  return out;
+}
+
+let filterFailed = false;
+const failListeners = new Set<() => void>();
+/** True when a filter could not run on this device (no WebGL2 or the context keeps failing). */
+export const filterUnavailable = () => filterFailed;
+export function onFilterFailed(fn: () => void) { failListeners.add(fn); return () => { failListeners.delete(fn); }; }
+
+/**
+ * One filter pass on the shared WebGL renderer. Returns null when it fails. The
+ * renderer is recreated when its context was lost (iOS drops WebGL contexts when the
+ * app goes to the background or too many are alive), and the result is checked so an
+ * empty frame is never used as a filtered photo.
+ */
+function runLook(src: HTMLCanvasElement, lookId: string, intensity: number, fresh = false): HTMLCanvasElement | null {
+  if (glFailed) return null;
   try {
-    gl = gl || new GLRenderer();
+    if (fresh || !gl || gl.gl.isContextLost()) gl = new GLRenderer();
   } catch {
     glFailed = true;
-    return src;
+    return null;
   }
   const recipe = findRecipe(lookId);
   const edit = { ...defaultEdit(), camId: recipe.id, intensity };
@@ -82,11 +107,14 @@ export function applyLook(src: HTMLCanvasElement, key: string, lookId: string, i
   const w = Math.round(src.width * s), h = Math.round(src.height * s);
   gl.setSource(src, true);
   gl.render(w, h, [0, 0, 1, 1], 0, false, P, recipe, false, 7, intensity / 100);
+  if (gl.gl.isContextLost()) return null;
   const out = document.createElement('canvas');
   out.width = src.width; out.height = src.height;
-  out.getContext('2d')!.drawImage(gl.canvas, 0, 0, src.width, src.height);
-  if (cache.size > 16) cache.delete(cache.keys().next().value as string);
-  cache.set(k, out);
+  const octx = out.getContext('2d', { willReadFrequently: true })!;
+  octx.drawImage(gl.canvas, 0, 0, src.width, src.height);
+  // A lost or unflushed context gives a transparent frame: treat it as a failure.
+  const probe = octx.getImageData(Math.floor(src.width / 2), Math.floor(src.height / 2), 1, 1).data;
+  if (probe[3] === 0) return null;
   return out;
 }
 

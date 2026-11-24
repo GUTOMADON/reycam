@@ -3,6 +3,8 @@ import { collageStrings } from './collage/strings';
 
 const CollageApp = lazy(() => import('./collage/CollageApp'));
 import { Pipeline } from './engine/pipeline';
+import { onMaskReady, maskPending } from './engine/luFx';
+import { quickLabel } from './engine/recipes-lu';
 import { RECIPES, CATEGORIES, findRecipe } from './engine/recipes';
 import type { EditState, Recipe } from './engine/types';
 import { exportVideoWebCodecs, webCodecsAvailable } from './engine/videoExport';
@@ -133,6 +135,10 @@ export default function App() {
     [presets]
   );
   const recipe = findRecipe(edit.camId);
+  // Person mask (LU glitter, flares, flash shadow) finished: render again with it.
+  const [maskBusy, setMaskBusy] = useState(false);
+  useEffect(() => onMaskReady(() => { dirty.current = true; setMaskBusy(maskPending()); }), []);
+  useEffect(() => { const id = window.setTimeout(() => setMaskBusy(maskPending()), 150); return () => window.clearTimeout(id); }, [edit.camId]);
 
   const showToast = useCallback((msg: string) => {
     window.clearTimeout(toastTimer.current);
@@ -328,7 +334,7 @@ export default function App() {
       if (p) commit({ ...p.edit, dateText: editRef.current.dateText });
       return;
     }
-    setEdit({ camId: id, intensity: 100 });
+    setEdit({ camId: id, intensity: 100, quick: {} });
   }, [presets, commit, setEdit]);
 
   /** Estimate the frame rate from presented frames, used for frame accurate export. */
@@ -984,6 +990,27 @@ export default function App() {
               <input type="range" min={0} max={100} value={edit.intensity} onChange={(e) => setEdit({ intensity: Number(e.target.value) })} />
               <span className="val">{edit.intensity}%</span>
             </label>
+            {recipe.quick && recipe.quick.length > 0 && (
+              <div className="quick-adj" role="group" aria-label={t.quickAdjust}>
+                {recipe.quick.map((qa) => {
+                  const v = edit.quick?.[qa.id] ?? 0;
+                  const setQ = (nv: number) => setEdit({ quick: { ...(edit.quick || {}), [qa.id]: nv } });
+                  if (qa.kind === 'choice') return (
+                    <div key={qa.id} className="qa-chips"><span className="muted">{quickLabel(lang, qa.id)}</span>
+                      {(qa.options || []).map((o, i) => <button key={o} type="button" className={v === i ? 'qa-chip on' : 'qa-chip'} onClick={() => setQ(i)}>{quickLabel(lang, o)}</button>)}
+                    </div>
+                  );
+                  if (qa.kind === 'shuffle') return <button key={qa.id} type="button" className="qa-chip" onClick={() => setQ(v + 1)}>🎲 {quickLabel(lang, qa.id)}</button>;
+                  return (
+                    <label key={qa.id} className="qa-range">
+                      <span className="muted">{quickLabel(lang, qa.id)}</span>
+                      <input type="range" min={-100} max={100} value={v} onChange={(e) => setQ(Number(e.target.value))} onDoubleClick={() => setQ(0)} />
+                    </label>
+                  );
+                })}
+                {maskBusy && <span className="mask-loading">{t.maskLoading}</span>}
+              </div>
+            )}
             {!isMobile && toolButtons}
           </div>
           {isMobile && tool && (

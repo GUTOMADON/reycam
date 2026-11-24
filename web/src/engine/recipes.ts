@@ -14,6 +14,7 @@ import { NATURE_LOOKS } from './recipes-nature';
 import { COLOR_LOOKS } from './recipes-color';
 import { VIDEO_LOOKS } from './recipes-video';
 import { EXTRA_LOOKS } from './recipes-extra';
+import { GU_LOOKS, LU_LOOKS } from './recipes-lu';
 import {
   Y2K_EXTRA, FLASH_EXTRA, INDIE_EXTRA, SIM_EXTRA, YELLOW_EXTRA, GREEN_EXTRA,
   WINE_EXTRA, LOWLIGHT_EXTRA, NATURE_EXTRA, COLOR_EXTRA, VIDEO_EXTRA, EXTRA_EXTRA
@@ -194,8 +195,16 @@ RECIPES.push(
   ...LOWLIGHT_LOOKS, ...NATURE_LOOKS, ...COLOR_LOOKS, ...VIDEO_LOOKS, ...EXTRA_LOOKS,
   ...Y2K_EXTRA, ...FLASH_EXTRA, ...INDIE_EXTRA, ...SIM_EXTRA, ...YELLOW_EXTRA,
   ...GREEN_EXTRA, ...WINE_EXTRA, ...LOWLIGHT_EXTRA, ...NATURE_EXTRA, ...COLOR_EXTRA,
-  ...VIDEO_EXTRA, ...EXTRA_EXTRA
+  ...VIDEO_EXTRA, ...EXTRA_EXTRA,
+  ...LU_LOOKS, ...GU_LOOKS
 );
+
+// Featured looks (badge) come first in their category: LU signatures, then Gu in Indie.
+{
+  const featured = RECIPES.filter((r) => r.badge);
+  const rest = RECIPES.filter((r) => !r.badge);
+  RECIPES.splice(0, RECIPES.length, rest[0], ...featured, ...rest.slice(1));
+}
 
 RECIPES.forEach((r, i) => {
   r.seed = i * 97 + 13;
@@ -214,7 +223,7 @@ RECIPES.forEach((r, i) => {
   }
 });
 
-export const CATEGORIES = ['all', 'fav', 'moody', 'bw', 'film', 'indie', 'y2k', 'flash', 'sim', 'yellow', 'green', 'wine', 'lowlight', 'nature', 'color', 'video', 'extra', 'mine'] as const;
+export const CATEGORIES = ['all', 'fav', 'moody', 'bw', 'film', 'indie', 'y2k', 'flash', 'sim', 'yellow', 'green', 'wine', 'lowlight', 'nature', 'color', 'video', 'extra', 'lu', 'mine'] as const;
 
 export function findRecipe(id: string, custom: Recipe[] = []): Recipe {
   return RECIPES.find((r) => r.id === id) || custom.find((r) => r.id === id) || RECIPES[0];

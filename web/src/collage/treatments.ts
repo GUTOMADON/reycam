@@ -30,18 +30,20 @@ const curve = (v: number, contrast: number) => Math.max(0, Math.min(255, (v - 12
  * it for the duration of one render. Treatments that turn the photo into one or
  * two colors skip it, since the filter colors would be lost anyway.
  */
-type PhotoFilter = { key: string; apply: (src: HTMLCanvasElement, key: string) => HTMLCanvasElement };
+/** Per photo filter: `keyFor` names the filter of a photo ('' = none), `apply` runs it on the source pixels. */
+type PhotoFilter = { keyFor: (photoKey: string) => string; apply: (src: HTMLCanvasElement, photoKey: string) => HTMLCanvasElement };
 let activeFilter: PhotoFilter | null = null;
 export function setPhotoFilter(f: PhotoFilter | null) { activeFilter = f; }
-export const photoFilterKey = () => activeFilter?.key ?? '';
+export const photoFilterKey = (photoKey: string) => activeFilter?.keyFor(photoKey) ?? '';
 const SINGLE_TONE = new Set<Treatment['type']>(['mono', 'duotone', 'posterize', 'negative', 'halftone', 'invert']);
 
 /** The treated photo. `key` identifies the source pixels (photo id + mask version). */
 export function treatPhoto(src: HTMLCanvasElement, key: string, t: Treatment | undefined, palette: Palette, maxDim: number): HTMLCanvasElement {
   const tt: Treatment = t || { type: 'none' };
-  if (activeFilter && !SINGLE_TONE.has(tt.type)) {
-    src = activeFilter.apply(src, key);
-    key = key + '|f:' + activeFilter.key;
+  const fk = activeFilter && !SINGLE_TONE.has(tt.type) ? activeFilter.keyFor(key) : '';
+  if (fk) {
+    src = activeFilter!.apply(src, key);
+    key = key + '|f:' + fk;
   }
   const colors = JSON.stringify([tt, colorsOf(tt, palette)]);
   const k = `${key}|${maxDim}|${colors}`;

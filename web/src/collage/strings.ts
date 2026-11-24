@@ -53,7 +53,16 @@ const en = {
   dotOrnamentTool: 'Dot ornament', lineOrnamentTool: 'Line ornament', punchTool: 'Punch out', ovalPanelTool: 'Oval window', thresholdTool: 'Torn ink patch', frostTool: 'Frosted glass',
   faceDoodleTool: 'Face doodles', playbackTool: 'Camera screen', compactTool: 'Compact camera', swatchTool: 'Color card', gridTool: 'Camera grid', spiralTool: 'Double spiral',
   barcodeMode: 'Barcode', tilesMode: 'Pixel tiles', shardsMode: 'Shards', removed: 'Removed', shift: 'Shift', confetti: 'Confetti', motif: 'Motif', motifFloral: 'Floral',
-  clover: 'Clover', lily: 'Lily', bouquet: 'Bouquet', squareDots: 'Square dots'
+  clover: 'Clover', lily: 'Lily', bouquet: 'Bouquet', squareDots: 'Square dots',
+  bgGradient: 'Gradient', bgZebra: 'Faux fur',
+  storyTitle: 'Multi Photo Story', storySub: '2 to 30 photos, laid out for Stories', storyTab: 'Story', storyCount: '{i} of {n}', storyAdd: 'Add photos',
+  storyHint: 'Pick from 2 to 30 photos. Drag to reorder, tap × to remove. You can also drop files here.', storyEmpty: 'Add at least 2 photos to see the layout.',
+  storyCreate: 'Create story', storyLimit: 'Up to {n} photos.', storySlow: 'More than 30 photos can be slow on phones.', storyAnalyzing: 'Analyzing photos {i} of {n}…',
+  swapped: 'Photos swapped', safeZones: 'Safe zones', cornerRadius: 'Corners', rotationAmount: 'Rotation', storyAddPhotos: 'Add photos', storyRemovePhoto: 'Remove photo',
+  storyEditHint: 'Drag a photo onto another to swap them. Lock a photo to keep it in place when you shuffle.', storyFeed: 'Also export 4:5 feed version',
+  shareStories: 'Share to Stories', storyDownloaded: 'Saved to your downloads. Open Instagram to add it to your Story.',
+  applyAll: 'Apply to all photos', useCollageFilter: 'Use collage filter', filterFailed: 'This filter could not run on this device. The photo is shown without it.',
+  movePhoto: 'Move', adjustPhoto: 'Adjust photo in frame', resetCrop: 'Reset', moveHint: 'Drag to move. Pinch with two fingers to resize and rotate. Double tap resets.', cropHint: 'Drag to reposition the photo inside its frame. Pinch to zoom in or out.'
 };
 
 export type CollageStrings = typeof en;
@@ -106,7 +115,16 @@ const pt: CollageStrings = {
   dotOrnamentTool: 'Ornamento de pontos', lineOrnamentTool: 'Ornamento de linhas', punchTool: 'Vazado', ovalPanelTool: 'Janela oval', thresholdTool: 'Remendo de tinta', frostTool: 'Vidro fosco',
   faceDoodleTool: 'Rabiscos no rosto', playbackTool: 'Tela de câmera', compactTool: 'Câmera compacta', swatchTool: 'Cartão de cor', gridTool: 'Grade de câmera', spiralTool: 'Espiral dupla',
   barcodeMode: 'Código de barras', tilesMode: 'Pixels', shardsMode: 'Estilhaços', removed: 'Removidos', shift: 'Deslocamento', confetti: 'Confete', motif: 'Motivo', motifFloral: 'Floral',
-  clover: 'Trevo', lily: 'Lírio', bouquet: 'Buquê', squareDots: 'Pontos quadrados'
+  clover: 'Trevo', lily: 'Lírio', bouquet: 'Buquê', squareDots: 'Pontos quadrados',
+  bgGradient: 'Degradê', bgZebra: 'Pelúcia',
+  storyTitle: 'Story com várias fotos', storySub: 'De 2 a 30 fotos, prontas para Stories', storyTab: 'Story', storyCount: '{i} de {n}', storyAdd: 'Adicionar fotos',
+  storyHint: 'Escolha de 2 a 30 fotos. Arraste para reordenar e toque em × para remover. Você também pode soltar arquivos aqui.', storyEmpty: 'Adicione pelo menos 2 fotos para ver o layout.',
+  storyCreate: 'Criar story', storyLimit: 'Até {n} fotos.', storySlow: 'Mais de 30 fotos pode ficar lento no celular.', storyAnalyzing: 'Analisando fotos {i} de {n}…',
+  swapped: 'Fotos trocadas', safeZones: 'Zonas seguras', cornerRadius: 'Cantos', rotationAmount: 'Rotação', storyAddPhotos: 'Adicionar fotos', storyRemovePhoto: 'Remover foto',
+  storyEditHint: 'Arraste uma foto sobre outra para trocar. Trave uma foto para ela não sair do lugar ao embaralhar.', storyFeed: 'Exportar também a versão 4:5 do feed',
+  shareStories: 'Compartilhar nos Stories', storyDownloaded: 'Salvo nos downloads. Abra o Instagram para adicionar ao seu Story.',
+  applyAll: 'Aplicar em todas as fotos', useCollageFilter: 'Usar filtro da colagem', filterFailed: 'Este filtro não pôde ser aplicado neste aparelho. A foto aparece sem ele.',
+  movePhoto: 'Mover', adjustPhoto: 'Ajustar foto na moldura', resetCrop: 'Redefinir', moveHint: 'Arraste para mover. Use dois dedos para aumentar, diminuir e girar. Toque duas vezes para voltar.', cropHint: 'Arraste para reposicionar a foto dentro da moldura. Use dois dedos para aproximar ou afastar.'
 };
 
 const SLOT_NAMES: Record<string, Record<string, string>> = {

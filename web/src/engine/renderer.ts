@@ -81,6 +81,13 @@ uniform float u_grain, u_grainSize, u_seed;
 uniform float u_vignette, u_scan, u_shift, u_vshift, u_fish;
 uniform float u_sharpen, u_soft, u_clarity, u_bloom, u_smooth, u_lofi;
 uniform vec3 u_bloomTint;
+// LU and Gu stages
+uniform vec3 u_gmap[5];
+uniform int u_gmapN;
+uniform float u_gmapMix, u_poster, u_thresh, u_ht, u_htMix, u_streak, u_speck, u_skinProt;
+uniform float u_flash, u_grainChroma, u_grainShadow;
+uniform vec2 u_flashC;
+uniform float u_struct;
 
 float luma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
 float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32 + u_seed); return fract(p.x * p.y); }
@@ -115,6 +122,21 @@ vec3 hsl2rgb(vec3 h) {
   return vec3(hue2c(p, q, k + 1.0 / 3.0), hue2c(p, q, k), hue2c(p, q, k - 1.0 / 3.0));
 }
 float bump(float x, float c) { return max(0.0, 1.0 - abs(x - c) / 0.25); }
+
+/** Gradient map through up to 5 evenly spaced stops. */
+vec3 gradientMap(float l) {
+  if (u_gmapN < 2) return vec3(l);
+  float x = clamp(l, 0.0, 1.0) * float(u_gmapN - 1);
+  int i = int(min(floor(x), float(u_gmapN - 2)));
+  vec3 a = u_gmap[0], b = u_gmap[1];
+  for (int k = 0; k < 4; k++) { if (k == i) { a = u_gmap[k]; b = u_gmap[k + 1]; } }
+  return mix(a, b, x - float(i));
+}
+/** Skin likelihood from hue, saturation and lightness (used for skin protection). */
+float skinW(vec3 c) {
+  vec3 hs = rgb2hsl(clamp(c, 0.0, 1.0));
+  return smoothstep(2.0, 12.0, hs.x) * (1.0 - smoothstep(32.0, 45.0, hs.x)) * smoothstep(0.1, 0.22, hs.y) * (1.0 - smoothstep(0.55, 0.75, hs.y)) * smoothstep(0.3, 0.5, hs.z);
+}
 
 vec3 tone(vec3 v) {
   vec3 x = v * u_exposure;
@@ -198,6 +220,13 @@ void main() {
     c = screenB(c, ov * 0.6);
   }
 
+  if (u_flash > 0.0) {
+    // Direct flash: brighter at the subject, falling off toward the corners.
+    vec2 d = (v_uv - u_flashC) * vec2(u_out.x / max(u_out.x, u_out.y), u_out.y / max(u_out.x, u_out.y));
+    float r = clamp(length(d) / 0.75, 0.0, 1.0);
+    c *= exp2(u_flash * mix(0.2, -0.3, smoothstep(0.0, 1.0, r)));
+  }
+  float skinK = u_skinProt > 0.0 ? skinW(c) * u_skinProt : 0.0;
   c = tone(c);
   c = u_hueM * c;
   float lum = luma(c);
@@ -221,6 +250,7 @@ void main() {
       }
       float s0 = h.y;
       h.x = mod(h.x + dH + 360.0, 360.0);
+      if (skinK > 0.0 && dS > 0.08) dS = mix(dS, 0.08, clamp(skinK, 0.0, 1.0));
       h.y = clamp(h.y * (1.0 + dS), 0.0, 1.0);
       h.z = clamp(h.z + dL * 0.3 * s0, 0.0, 1.0);
       c = hsl2rgb(h);
@@ -242,6 +272,45 @@ void main() {
     float l01 = clamp(luma(c), 0.0, 1.0);
     c = mix(c, mix(u_duoA, u_duoB, l01), u_duo);
   }
+  if (u_gmapMix > 0.0 || u_poster > 1.5 || u_thresh > 0.0) {
+    float l = clamp(luma(c), 0.0, 1.0);
+    if (u_thresh > 0.0) {
+      // Two inks with ordered noise dithering, like a photocopy or riso print.
+      float dn = hash(floor(gl_FragCoord.xy / max(1.0, u_out.x / 1400.0))) - 0.5;
+      l = smoothstep(u_thresh - 0.03, u_thresh + 0.03, l + dn * 0.22);
+    } else if (u_poster > 1.5) {
+      // Posterize with a short smooth edge between levels.
+      float x = l * (u_poster - 1.0);
+      float f = fract(x);
+      l = (floor(x) + smoothstep(0.42, 0.58, f)) / (u_poster - 1.0);
+    }
+    vec3 gm = u_gmapN >= 2 ? gradientMap(l) : vec3(l);
+    // Structural looks (threshold, posterize) blend with the original by intensity, plain maps by gmapMix.
+    c = mix(c, gm, (u_thresh > 0.0 || u_poster > 1.5) ? u_struct : u_gmapMix);
+  }
+  if (u_ht > 0.0) {
+    // Round halftone dots on a 45 degree grid; dot size follows darkness.
+    float cell = max(3.0, u_ht * u_out.x / 1000.0);
+    vec2 q = gl_FragCoord.xy * mat2(0.7071, -0.7071, 0.7071, 0.7071) / cell;
+    vec2 f = fract(q) - 0.5;
+    float l = clamp(luma(c), 0.0, 1.0);
+    float rad = sqrt(1.0 - l) * 0.62;
+    float dotv = 1.0 - smoothstep(rad - 0.06, rad + 0.06, length(f));
+    vec3 ink = u_gmapN >= 2 ? u_gmap[0] : c * 0.35;
+    vec3 paper = u_gmapN >= 2 ? mix(c, u_gmap[u_gmapN - 1], 0.35) : min(c * 1.12, vec3(1.0));
+    c = mix(c, mix(paper, ink, dotv), u_htMix);
+  }
+  if (u_streak > 0.0) {
+    float col = hash(vec2(floor(gl_FragCoord.x / max(1.0, u_out.x / 500.0)), 7.0));
+    float on = step(0.975, col) * smoothstep(0.55, 0.9, luma(c));
+    c = mix(c, u_gmapN >= 2 ? u_gmap[1] : c * 0.7, on * u_streak);
+  }
+  if (u_speck > 0.0) {
+    vec2 g = floor(gl_FragCoord.xy / max(1.0, u_out.x / 900.0));
+    float n = hash(g * 1.7 + 3.0);
+    c = mix(c, u_gmapN >= 2 ? u_gmap[0] : vec3(0.1), step(1.0 - u_speck * 0.02, n));
+    c *= 1.0 - (hash(g + 11.0) - 0.5) * 0.08 * u_speck;
+  }
   if (u_bloom > 0.0) {
     vec3 b = tone(bl) * 1.15 * u_bloomTint;
     c = mix(c, screenB(clamp(c, 0.0, 1.0), clamp(b, 0.0, 1.0)), u_bloom * 0.55);
@@ -249,7 +318,9 @@ void main() {
   if (u_grain > 0.0) {
     vec2 g = floor(gl_FragCoord.xy / max(1.0, u_grainSize));
     float n = (hash(g) + hash(g + 17.0) + hash(g + 41.0) - 1.5) / 1.5;
-    c += n * u_grain;
+    float sw = 1.0 + u_grainShadow * (1.0 - clamp(luma(c), 0.0, 1.0));
+    c += n * u_grain * sw;
+    if (u_grainChroma > 0.0) c += (vec3(hash(g + 3.1), hash(g + 7.3), hash(g + 11.7)) - 0.5) * u_grain * u_grainChroma * 1.4;
   }
   float f2 = 1.0;
   if (u_scan > 0.0 && mod(floor(gl_FragCoord.y), 3.0) < 1.0) f2 = 1.0 - u_scan * 0.45;
@@ -280,6 +351,16 @@ export function effectiveParams(recipe: Recipe, edit: EditState, plain: boolean)
     if (plain) { P[k] = 0; continue; }
     if (hueKeys[k]) { P[k] = edit.adj[k] ? edit.adj[k] : (recipe[k] || 0); continue; }
     P[k] = (recipe[k] || 0) * t + (edit.adj[k] || 0);
+  }
+  // Quick adjustments of the look (LU and Gu): each range adds its mapped amounts.
+  if (!plain && recipe.quick) {
+    for (const q of recipe.quick) {
+      const v = edit.quick?.[q.id] ?? 0;
+      if (q.kind === 'choice') { P['choice_' + q.id] = v; continue; }
+      if (q.kind === 'shuffle') { P.sparkleSeed = v; continue; }
+      if (!v || !q.map) continue;
+      for (const [k, amt] of Object.entries(q.map)) P[k] = (P[k] || 0) + (amt * v) / 100;
+    }
   }
   const dz = P.dehaze / 100;
   if (dz !== 0) {
@@ -524,6 +605,28 @@ export class GLRenderer {
     f3('u_bloomTint', (recipe.bloomTint || [255, 255, 255]).map((v) => v / 255));
     f1('u_smooth', Math.max(0, P.smoothSkin) / 100);
     f1('u_lofi', Math.max(0, P.lofi));
+    // LU and Gu stages
+    // A palette quick adjustment can swap the gradient map for one of the alternates.
+    const gm = (P.choice_palette > 0 && recipe.gmapAlts?.[P.choice_palette - 1]) || recipe.gmap || [];
+    const stops: number[] = [];
+    for (let k = 0; k < 5; k++) { const c = gm[Math.min(k, Math.max(0, gm.length - 1))] || [0, 0, 0]; stops.push(c[0] / 255, c[1] / 255, c[2] / 255); }
+    gl.uniform3fv(this.u(p, 'u_gmap[0]'), new Float32Array(stops));
+    gl.uniform1i(this.u(p, 'u_gmapN'), Math.min(5, gm.length));
+    f1('u_gmapMix', Math.max(0, Math.min(1, (P.gmapMix || 0) / 100)));
+    const tt = Math.max(t, 0.01);
+    const levels = Math.round((P.poster || 0) / tt);
+    f1('u_poster', t > 0 && levels >= 2 ? levels : 0);
+    f1('u_thresh', P.thresh > 0 && t > 0 ? Math.max(0.05, Math.min(0.95, P.thresh / tt / 100)) : 0);
+    f1('u_struct', t);
+    f1('u_ht', (P.halftone || 0) > 0 && t > 0 ? P.halftone / tt : 0);
+    f1('u_htMix', Math.max(0, Math.min(1, (P.htMix || 0) / 100)));
+    f1('u_streak', Math.max(0, (P.streak || 0) / 100));
+    f1('u_speck', Math.max(0, (P.speck || 0) / 100));
+    f1('u_skinProt', Math.max(0, Math.min(1, (P.skinProt || 0) / 100)));
+    f1('u_flash', Math.max(0, (P.flash || 0) / 100));
+    gl.uniform2f(this.u(p, 'u_flashC'), P.flashX ?? 0.5, 1 - (P.flashY ?? 0.42));
+    f1('u_grainChroma', Math.max(0, (P.grainChroma || 0) / 100));
+    f1('u_grainShadow', Math.max(0, (P.grainShadow || 0) / 100));
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 }

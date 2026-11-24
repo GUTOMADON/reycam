@@ -1,5 +1,6 @@
 import { GLRenderer, effectiveParams, type Source } from './renderer';
 import type { EditState, FrameId, Recipe } from './types';
+import { drawLuFx, headCenter, personMask } from './luFx';
 
 const RATIOS: Record<string, number> = { '1:1': 1, '4:5': 0.8, '3:4': 0.75, '9:16': 9 / 16, '16:9': 16 / 9, '3:2': 1.5, '2:3': 2 / 3 };
 
@@ -78,6 +79,9 @@ export class Pipeline {
   private tmp = document.createElement('canvas');
   private overlaySrc: Source | null = null;
   private overlayKey = '';
+  /** Last head position found in the person mask, for the flash falloff center. */
+  private head: [number, number] | null = null;
+  private headSrc: Source | null = null;
 
   constructor() {
     this.gl = new GLRenderer();
@@ -143,12 +147,22 @@ export class Pipeline {
       ? [g.crop[0] + g.crop[2] * (0.015 + weaveX), g.crop[1] + g.crop[3] * (0.015 + weaveY), g.crop[2] * 0.97, g.crop[3] * 0.97]
       : g.crop;
     const seed = inp.isVideo ? (inp.time * 60) % 997 : 3.7;
+    // LU looks: flash falloff centered on the head once the person mask is known.
+    const usesMask = !inp.plain && lookOn && ((P.glitter || 0) > 0 || (P.flares || 0) > 0 || (P.flashShadow || 0) > 0 || (P.flash || 0) > 0);
+    if (usesMask && this.head && this.headSrc === inp.source) { P.flashX = this.head[0]; P.flashY = this.head[1]; }
     this.gl.render(g.w, g.h, crop, g.rot, edit.flipH, P, recipe, inp.plain, seed, edit.intensity / 100);
 
     const w = g.w, h = g.h;
     const stamp = edit.stamp === 'auto' ? ((lookOn && recipe.stamp) || null) : edit.stamp === 'off' ? null : edit.stamp;
     const fl = Math.max(0, P.flicker) / 100;
-    const needs2D = !inp.plain && (P.leak > 0 || P.dust > 0 || P.glitch > 0 || (fl > 0 && inp.isVideo) || !!stamp);
+    const luFx = !inp.plain && lookOn && ((P.glitter || 0) > 0 || (P.flares || 0) > 0 || (P.flashShadow || 0) > 0);
+    const needs2D = !inp.plain && (P.leak > 0 || P.dust > 0 || P.glitch > 0 || (fl > 0 && inp.isVideo) || !!stamp || luFx);
+    let mask: ReturnType<typeof personMask> = null;
+    if (usesMask) {
+      mask = personMask(inp.source, this.gl.canvas, inp.isVideo, inp.time);
+      const hc = headCenter(mask);
+      if (hc) { this.head = hc; this.headSrc = inp.source; }
+    }
     // Fast path: nothing to paint on top, so compose straight from the GPU canvas.
     if (!needs2D) {
       this.compose(out, inp.plain ? 'none' : frame, w, h, this.gl.canvas);
@@ -159,6 +173,12 @@ export class Pipeline {
     const ctx = work.getContext('2d')!;
     ctx.drawImage(this.gl.canvas, 0, 0);
 
+    if (luFx) {
+      drawLuFx(ctx, w, h, mask, {
+        glitter: Math.max(0, P.glitter || 0) / 100, flares: Math.max(0, P.flares || 0) / 100, flashShadow: Math.max(0, P.flashShadow || 0) / 100,
+        palette: P.choice_colors || 0, seed: 1 + (P.sparkleSeed || 0), time: inp.time, isVideo: inp.isVideo
+      });
+    }
     this.leaks(ctx, w, h, P.leak, recipe, inp);
     this.dust(ctx, w, h, P.dust, inp);
     this.glitch(ctx, w, h, P.glitch, recipe, inp);

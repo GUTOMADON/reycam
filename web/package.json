@@ -10,6 +10,8 @@
     "test:i18n": "node tests/i18n.test.mjs",
     "test:e2e": "node tests/e2e.mjs",
     "test:library": "node tests/library-diversity.test.mjs",
+    "test:collage": "node tests/collage-filter.test.mjs",
+    "test:story": "node tests/story.test.mjs",
     "test:looks": "node tests/lab/run.mjs distinct --threshold 1.0",
     "lab:mirror": "node tests/lab/run.mjs mirror --cat moody",
     "lab:counts": "node tests/lab/run.mjs counts"

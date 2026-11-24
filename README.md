@@ -126,6 +126,25 @@ Templates are plain data in [`web/src/collage/templates.ts`](web/src/collage/tem
 
 No renderer changes are needed. A new tool is a layer kind in `types.ts`, a draw function in [`effects.ts`](web/src/collage/effects.ts) called from `render.ts`, an entry in `TOOLS` (how the Stickers tab creates it) and in `PARAMS` (which settings the editor shows) in [`tools.ts`](web/src/collage/tools.ts), and its labels in `strings.ts`.
 
+### Multi Photo Story
+
+Inside Collage there are two entry points: **Templates** and **Multi Photo Story** (Portuguese: **Story com várias fotos**). The user picks 2 to 30 photos (up to 40 with a warning), reorders them by dragging (or with the arrows on phones), removes them with ×, chooses a style with a live preview, answers the same filter sheet as templates, and edits the result in the collage editor. A **Story** tab regenerates the layout: style, Shuffle, gutter (0 to 40 px), border (0 to 30 px), corner radius (0 to 60 px), shadow, rotation (0 to 20°), density, add or remove photos, and lock a photo so regeneration keeps it in place. Dropping one photo on another swaps them. The Instagram safe zones (top 250 px and bottom 340 px of 1920) show as a dashed overlay that is never exported. Export is 1080 × 1920 or 2160 × 3840 (JPEG or PNG, sRGB, no watermark), with an optional 4:5 feed version (1080 × 1350) laid out again, and **Share to Stories** opens the share sheet (or downloads the file with a message on browsers without file sharing). Photos load as 1440 px previews (1080 px above 12 photos).
+
+Styles: Grid, Mosaic, Messy, Polaroid wall, Photo strip, Film roll, Diagonal, Circles and shapes, Scrapbook and Frame focus. A story is a normal collage document with a `story` field, so drafts, undo, redo, autosave, palettes and filters per photo work the same way.
+
+#### Adding a story style
+
+Styles live in [`web/src/collage/story.ts`](web/src/collage/story.ts). Add an entry to `STORY_STYLES`:
+
+1. `id`, a localized `name`, a recommended `filter` (look id) and optional `defaults` for the options.
+2. `generate(photos, canvas, options, seed)`: a pure function that returns `frames` (photo index, center `x` and `y`, `w` and `h` as canvas fractions, `rot`, `shape`, `z`), optional `strips` (photobooth or film strips) and optional `decor` layers. Use `rng(seed)` for randomness so Shuffle only changes the seed, keep faces between `SAFE_TOP` and `1 - SAFE_BOTTOM`, and use `photos[i].faces` and `quality` to pick heroes or avoid covering faces.
+
+The editor, preview, export and tests pick up the new style automatically. `npm run test:story` checks every style from 2 to 30 photos (all photos placed, seeded, under 300 ms, no holes in Grid and Mosaic, no covered faces in Messy and Scrapbook).
+
+### Collage filters (filter pairing fix)
+
+The filter chosen in the "Do you want to use a filter too?" sheet is stored in the collage document (`filter`, plus `slotFilters` per photo) and applied to each photo before the template treatment; stickers, text and interface elements never get it, and the cutout mask is always computed from the original photo. What went wrong before: in the published version the Lu filters did not exist, so "Use recommended filter" was disabled, and the filter pass ran on a separate WebGL context that silently returned the unfiltered photo when the context could not be created or was lost (iOS drops WebGL contexts when the app goes to the background). Now a lost context is recreated, an empty result is retried, and a filter that still cannot run shows a message instead of failing silently. The Photo tab shows the filter of the selected photo with intensity, change, remove, "Apply to all photos" and "Use collage filter". `npm run test:collage` covers recommended, another and no filter, changing the filter after opening, undo and redo, and export matching the preview.
+
 ## Looks
 
 | Group | Examples |
@@ -140,6 +159,14 @@ No renderer changes are needed. A new tool is a layer kind in `types.ts`, a draw
 | Flash, Low light, Nature, Colors, Video, Extras | Paparazzi, Neon Noir, Golden Hour, Ultra Violet, VHS Tape, Super 8, Fisheye, Prism, Night Vision and more |
 
 Look names are original. Several looks are inspired by classic film stocks and popular retro camera apps, without using their names or logos.
+
+### LU and Gu filters
+
+The **LU** category has 18 looks whose names start with "Lu" (Lu Haze, Lu Flash and Lu Glitter first, with a star badge), and the **Indie** category starts with six "Gu" looks (lightning badge): Gu Candle, Gu Soirée, Gu Amber, Gu Bronze, Gu Ember and Gu Dusk. They use the same data driven engine as every other look, with extra GPU stages (gradient map, posterize, threshold with dithering, halftone, print streaks and specks, flash falloff centered on the head, skin protection, colored and shadow weighted grain) and person mask effects drawn after the GPU pass (glitter only on the background, star flares, synthetic flash shadow; without a mask they fall back to the whole image at lower strength). Each look has quick adjustments under the intensity slider. Grain is generated per pixel at output resolution and changes every frame on video. The looks are evaluated directly on the GPU at full precision, so no baked LUT files are needed.
+
+#### Adding a Lu or Gu filter
+
+Add one entry to `LU_LOOKS` or `GU_LOOKS` in [`web/src/engine/recipes-lu.ts`](web/src/engine/recipes-lu.ts): `id` (`lu-...` or `gu-...`), `name`, `cat` (`lu` or `indie`), optional `badge`, `desc`, the parameters (same slider scale as the other looks, exposure 60 = 1 EV, `gmap` stops, `poster`, `thresh`, `halftone`, `flash`, `glitter`, `flares`, `flashShadow`...) and `quick` adjustments (`range` maps a slider to parameters, `choice` picks an option such as an alternate `gmapAlts` palette, `shuffle` changes the sparkle seed). Add the Portuguese description to `web/src/i18n/locales/pt.json` and any new quick adjustment label to `QUICK_LABELS`. Lu looks are offered first in the collage filter sheet, and the recommended pairing per template is in [`web/src/collage/filters.ts`](web/src/collage/filters.ts).
 
 ## Architecture
 

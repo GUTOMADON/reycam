@@ -606,6 +606,13 @@ export function drawBackgroundExtra2(env: FxEnv, c: CanvasRenderingContext2D, l:
   const c1 = col(env, l.paint, '#F0E8D8'), c2 = col(env, l.paint2, '#111111');
   const r = rng(l.seed ?? 5);
   switch (l.style) {
+    case 'gradient': {
+      const g = c.createLinearGradient(0, 0, W * 0.3, H);
+      g.addColorStop(0, c1); g.addColorStop(1, col(env, l.paint2, '#E2D6C6'));
+      c.fillStyle = g; c.fillRect(0, 0, W, H);
+      applyTexture(c, 0, 0, W, H, l.texture, u);
+      return true;
+    }
     case 'zebra': {
       c.fillStyle = c1; c.fillRect(0, 0, W, H);
       c.fillStyle = c2;

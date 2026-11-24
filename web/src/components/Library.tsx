@@ -5,13 +5,13 @@ import { lookDesc } from '../i18n';
 
 export const CAT_KEY: Record<string, string> = {
   all: 'catAll', fav: 'catFav', moody: 'catMoody', bw: 'catBw', film: 'catFilm', sim: 'catSims', y2k: 'catY2k', flash: 'catFlash', indie: 'catIndie', lowlight: 'catLowlight',
-  nature: 'catNature', yellow: 'catYellow', green: 'catGreen', wine: 'catWine', color: 'catColors', video: 'catVideo', extra: 'catExtras', mine: 'catMine'
+  nature: 'catNature', yellow: 'catYellow', green: 'catGreen', wine: 'catWine', color: 'catColors', video: 'catVideo', extra: 'catExtras', lu: 'catLu', mine: 'catMine'
 };
 
 /** Accent dot shown next to each category. */
 const CAT_DOT: Record<string, string> = {
   all: '#f4dce2', fav: '#ff4d6d', moody: '#3f8f86', bw: '#d9d9d9', film: '#e8a35c', indie: '#ff7a59', y2k: '#7cc4ff', flash: '#fff3b0', sim: '#c9b8a6', yellow: '#ffd23d',
-  green: '#4fd16b', wine: '#9e2a4a', lowlight: '#6b6bff', nature: '#8fbf6a', color: '#d58bff', video: '#ff5c5c', extra: '#5ce1e6', mine: '#f08b8f'
+  green: '#4fd16b', wine: '#9e2a4a', lowlight: '#6b6bff', nature: '#8fbf6a', color: '#d58bff', video: '#ff5c5c', extra: '#5ce1e6', lu: '#b0284f', mine: '#f08b8f'
 };
 
 export const descOf = (r: Recipe, lang: string) => lookDesc(lang, r.id, r.desc);
@@ -60,6 +60,7 @@ const LookCard = memo(function LookCard({ r, thumb, selected, fav, catLabel, des
       <button type="button" className="look-btn" onClick={() => onPick(r.id)} aria-pressed={selected} title={desc}>
         <span className="look-img">
           {thumb ? <img src={thumb} alt="" decoding="async" /> : <span className="thumb-ph" />}
+          {r.badge && <span className={'look-badge ' + r.badge} aria-hidden="true">{r.badge === 'star' ? '★' : '⚡'}</span>}
         </span>
         <span className="look-name">{r.name}</span>
         <span className="look-cat">{catLabel}</span>
@@ -158,7 +159,7 @@ export const Library = memo(function Library(p: LibraryProps) {
         <div className="m-cats" ref={catRow} role="tablist" aria-label={t.categories}>
           {chips.map((c) => (
             <button key={c} type="button" role="tab" aria-selected={cat === c} className={cat === c ? 'cat-chip on' : 'cat-chip'} onClick={() => pick(c)}>
-              {c === 'fav' ? <Heart on={cat === 'fav'} size={13} /> : c !== 'all' && <span className="dot" style={{ background: CAT_DOT[c] }} aria-hidden="true" />}
+              {c === 'fav' ? <Heart on={cat === 'fav'} size={13} /> : c === 'lu' ? <span className="bolt" aria-hidden="true">⚡</span> : c !== 'all' && <span className="dot" style={{ background: CAT_DOT[c] }} aria-hidden="true" />}
               <span>{label(c)}</span>
               {c !== 'all' && <span className="n">{counts[c] || 0}</span>}
             </button>

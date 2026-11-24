@@ -257,7 +257,11 @@
     "copyLink": "Copiar enlace",
     "linkCopied": "Enlace copiado. Pégalo en Safari",
     "heicConverting": "Convirtiendo foto HEIC…",
-    "hevcNote": "Este navegador no reproduce este vídeo (HEVC / Alta eficiencia). Abre ReyCam en Safari o en el móvil, o en iPhone usa Ajustes → Cámara → Formatos → Más compatible."
+    "hevcNote": "Este navegador no reproduce este vídeo (HEVC / Alta eficiencia). Abre ReyCam en Safari o en el móvil, o en iPhone usa Ajustes → Cámara → Formatos → Más compatible.",
+    "catLu": "LU",
+    "featured": "Destacado",
+    "quickAdjust": "Ajustes rápidos",
+    "maskLoading": "Detectando a la persona…"
   },
   "looks": {
     "original": "Sin cámara, solo tus ajustes",

@@ -138,3 +138,33 @@
 .col-filter-sheet { max-width: 420px; }
 .col-filter-options { display: flex; flex-direction: column; gap: 8px; }
 .col-filter-sheet .col-filter-strip { flex-wrap: wrap; max-height: 50vh; overflow-y: auto; }
+.col-canvas.mode-crop { cursor: move; outline: 2px dashed rgba(255,255,255,0.55); outline-offset: 3px; }
+/* Collage entry points: Templates and Multi Photo Story */
+.col-entry { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 16px 8px; }
+.col-entry-card { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 16px; border: 1px solid var(--border-soft); background: var(--surface-2); color: var(--text); text-align: left; }
+.col-entry-card b { display: block; font-size: 14px; }
+.col-entry-card small { display: block; font-size: 11px; opacity: 0.7; }
+.col-entry-card.on { border-color: var(--wine-3); }
+.col-entry-ico { font-size: 22px; color: var(--wine-3); }
+.col-story-anim { position: relative; width: 34px; height: 44px; flex: 0 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+.col-story-anim i { background: var(--wine-3); border-radius: 3px; animation: col-fall 2.4s ease-in-out infinite; }
+.col-story-anim i:nth-child(2) { animation-delay: 0.2s; } .col-story-anim i:nth-child(3) { animation-delay: 0.4s; } .col-story-anim i:nth-child(4) { animation-delay: 0.6s; }
+@keyframes col-fall { 0% { transform: translateY(-14px) rotate(-12deg); opacity: 0; } 30%, 80% { transform: none; opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .col-story-anim i { animation: none; } }
+/* Multi Photo Story picker */
+.col-story { display: grid; grid-template-columns: 1fr 300px; gap: 16px; padding: 0 16px 16px; }
+@media (max-width: 760px) { .col-story { grid-template-columns: 1fr; } }
+.col-story-add { min-height: 64px; }
+.col-story-thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; }
+.col-story-thumb { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; background: var(--surface-2); touch-action: manipulation; }
+.col-story-thumb.drag { opacity: 0.4; }
+.col-story-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.col-story-thumb .n { position: absolute; left: 4px; top: 4px; font-size: 11px; background: rgba(0,0,0,0.6); color: #fff; border-radius: 8px; padding: 0 5px; }
+.col-story-thumb .x { position: absolute; right: 2px; top: 2px; width: 26px; height: 26px; border-radius: 13px; border: 0; background: rgba(0,0,0,0.65); color: #fff; font-size: 16px; }
+.col-story-thumb .mv { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; }
+.col-story-thumb .mv button { width: 28px; height: 24px; border: 0; background: rgba(0,0,0,0.55); color: #fff; }
+.col-story-thumb .mv button:disabled { opacity: 0.25; }
+.col-story-preview { display: grid; place-items: center; aspect-ratio: 9 / 16; max-height: 62vh; margin: 8px auto; border-radius: 12px; overflow: hidden; background: var(--surface-2); }
+.col-story-preview img { width: 100%; height: 100%; object-fit: contain; }
+.col-file { position: relative; overflow: hidden; }
+.col-file input { position: absolute; inset: 0; opacity: 0; }

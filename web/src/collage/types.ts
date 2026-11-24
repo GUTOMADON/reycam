@@ -88,7 +88,7 @@ export interface LayerBase {
 export interface BackgroundLayer extends LayerBase {
   kind: 'background';
   style: 'solid' | 'stripes' | 'split' | 'crayon' | 'sky' | 'desktop' | 'desktop3d' | 'photo'
-    | 'quilt' | 'comic' | 'ghost' | 'sunburst' | 'torn' | 'journal' | 'zebra' | 'stained' | 'tiles' | 'grunge';
+    | 'quilt' | 'comic' | 'ghost' | 'sunburst' | 'torn' | 'journal' | 'zebra' | 'stained' | 'tiles' | 'grunge' | 'gradient';
   paint: Paint;
   paint2?: Paint;
   texture: Texture;
@@ -129,6 +129,8 @@ export interface PhotoLayer extends LayerBase {
   shadow?: boolean;
   fill?: Paint;
   windowShape?: 'star' | 'burst' | 'rounded' | 'star4' | 'heart' | 'oval';
+  /** Rounded photo corners, px at 1080 wide. */
+  radius?: number;
   /** Soft edge of a shape window (head portal), 0 to 1, and dark inner vignette. */
   feather?: number;
   vignette?: number;
@@ -417,7 +419,7 @@ export interface LayoutLayer extends LayerBase {
   paint: Paint;
   treatment: Treatment;
   /** Photo index and crop anchor per cell, cycling when shorter than the cells. */
-  cells: { photo: number; anchor?: Anchor; zoom?: number; blur?: boolean }[];
+  cells: { photo: number; anchor?: Anchor; zoom?: number; blur?: boolean; /** Manual crop center (0..1 of the photo), set by dragging the photo inside its cell. */ focus?: [number, number] }[];
   scanlines?: number;
   /** Film strip edge text and frame numbers; photo rotation inside each cell (0 or 90). */
   edgeText?: string;
@@ -633,6 +635,10 @@ export interface CollageDoc {
   dateStamp: boolean;
   /** Photo filter (a ReyCam look) applied to the photo slots before the template treatments. */
   filter?: { id: string; intensity: number };
+  /** Multi Photo Story settings: style, seed, layout options and the 9:16 safe zone overlay. */
+  story?: { style: string; seed: number; opts: import('./story').StoryOptions; safeZones: boolean };
+  /** Per photo slot filter (by photo index). null = no filter for that photo, missing = use `filter`. */
+  slotFilters?: Record<number, { id: string; intensity: number } | null>;
   finish?: 'film' | 'riso';
   created: number;
   updated: number;

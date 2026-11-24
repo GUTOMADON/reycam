@@ -547,3 +547,15 @@ input[type='range']::-moz-range-thumb { width: 18px; height: 18px; border-radius
   .nav-btn.nav-collage { border-color: rgba(182,156,255,0.5); background: linear-gradient(135deg, rgba(255,154,213,0.18), rgba(143,211,255,0.16), rgba(255,229,143,0.14)); }
   .nav-btn.nav-collage .nav-ico { background: rgba(255,255,255,0.1); font-size: 20px; }
 }
+/* Featured look badges (LU signatures and Gu) and the LU category accent */
+.look-img { position: relative; }
+.look-badge { position: absolute; top: 4px; left: 4px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; display: grid; place-items: center; font-size: 11px; line-height: 1; background: rgba(20, 6, 12, 0.72); color: #ffd23d; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4); }
+.look-badge.star { color: #ffd6e4; }
+.cat-chip .bolt, .cat-item .bolt { font-size: 12px; color: #ffd23d; }
+.quick-adj { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 6px 2px 2px; }
+.quick-adj .qa-range { display: flex; align-items: center; gap: 6px; font-size: 12px; min-width: 150px; flex: 1 1 150px; }
+.quick-adj .qa-range input { flex: 1; min-width: 70px; }
+.quick-adj .qa-chips { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; font-size: 12px; }
+.quick-adj .qa-chip { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border-soft, rgba(255,255,255,0.15)); background: transparent; color: inherit; font-size: 12px; }
+.quick-adj .qa-chip.on { background: var(--wine-3, #9e2a4a); border-color: transparent; color: #fff; }
+.mask-loading { font-size: 12px; opacity: 0.75; }
