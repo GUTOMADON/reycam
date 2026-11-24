@@ -123,8 +123,10 @@ function scatter(photos: PhotoMeta[], c: StoryCanvas, o: StoryOptions, seed: num
       const w = w0 * [1, 0.8, 0.62, 0.45][Math.min(3, Math.floor(tries / 40))];
       const h = (w * ar) / a;
       const gx = (k % cols + 0.5) / cols, gy = (Math.floor(k / cols) + 0.5) / rows;
-      const x = Math.min(1 - w * 0.35, Math.max(w * 0.35, gx + (r() - 0.5) * (1 / cols) * 0.9));
-      const y = S.top + h * 0.3 + (gy + (r() - 0.5) * (1 / rows) * 0.8) * (S.bottom - S.top - h * 0.6);
+      // Keep the whole print (with its rotation) inside the canvas, never cut by an edge.
+      const mx = Math.min(0.5, w * 0.55 + 0.015), my = Math.min(0.5, h * 0.55 + 0.012);
+      const x = Math.min(1 - mx, Math.max(mx, gx + (r() - 0.5) * (1 / cols) * 0.9));
+      const y = Math.min(1 - my, Math.max(my, S.top + h * 0.3 + (gy + (r() - 0.5) * (1 / rows) * 0.8) * (S.bottom - S.top - h * 0.6)));
       const f: Frame = { photo: pi, x, y, w, h, rot: (r() * 2 - 1) * o.rotation, shape, z: k };
       // Covering an earlier face is not allowed; prefer spots that overlap less.
       const covers = frames.some((e) => facePoints(e, photos[e.photo], ar).some(([fx, fy]) => inside(f, fx, fy, 0.01)));
