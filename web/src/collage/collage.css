@@ -168,3 +168,37 @@
 .col-story-preview img { width: 100%; height: 100%; object-fit: contain; }
 .col-file { position: relative; overflow: hidden; }
 .col-file input { position: absolute; inset: 0; opacity: 0; }
+/* Story picker fixes: the page scrolls, the add box is a row, Create stays reachable on phones. */
+.col-story { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-top: 12px; padding-bottom: max(16px, env(safe-area-inset-bottom)); align-content: start; }
+.col-story-left, .col-story-right { min-width: 0; }
+.col-story .col-story-add { aspect-ratio: auto; flex-direction: row; width: 100%; min-height: 56px; height: 56px; margin-bottom: 8px; }
+.col-story .col-story-add span { font-size: 14px; }
+.col-story .col-story-add .col-pick-plus { font-size: 22px; }
+.col-story-right .col-start { width: 100%; }
+@media (max-width: 760px) {
+  .col-story-preview { max-height: 52vh; width: auto; }
+  .col-story-right .col-start { position: sticky; bottom: max(8px, env(safe-area-inset-bottom)); z-index: 2; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+  .col-story-thumbs { grid-template-columns: repeat(auto-fill, minmax(68px, 1fr)); }
+}
+/* Nothing in the story page or the editor panel may be wider than the screen. */
+.col-story { overflow-x: hidden; }
+.col-panel { overflow-x: hidden; }
+.col-panel > *, .col-story-left > *, .col-story-right > * { min-width: 0; max-width: 100%; }
+@media (max-width: 760px) {
+  .col-story { grid-template-columns: minmax(0, 1fr); }
+  /* Style chips wrap on phones instead of a sideways strip. */
+  .col-story-right .col-filter-strip, .col-panel .col-filter-strip.wrap { flex-wrap: wrap; overflow-x: visible; }
+}
+/* Narrow screens: the element sliders stack label above slider, so nothing overlaps. */
+@media (max-width: 760px) {
+  .col-selbar-ranges .col-range { flex-direction: column; align-items: stretch; gap: 0; }
+  .col-selbar-ranges .col-range span { font-size: 11px; }
+  .col-selbar-ranges .col-range input { min-width: 0; margin: 4px 0; }
+  .col-selbar-ranges .col-range em { display: none; }
+}
+/* Phones: keep the collage the biggest thing on screen. */
+@media (max-width: 760px) {
+  .col-editor .col-panel { max-height: 26dvh; }
+  .col-editor .col-selbar { padding-top: 4px; }
+  .col-editor .col-selbar-actions button { padding: 4px; }
+}

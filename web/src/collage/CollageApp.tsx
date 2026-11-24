@@ -1425,7 +1425,7 @@ export default function CollageApp({ lang, appT, isMobile, showToast, onClose }:
     const selPhoto = sel && sel.kind === 'photo' ? sel : null;
     return (
       <>
-        <div className="col-filter-strip">
+        <div className="col-filter-strip wrap">
           {STORY_STYLES.map((x) => chip(st.style === x.id, x.name[lang] ?? x.name.en, () => restory((s) => { s.style = x.id; s.opts = { ...s.opts, ...x.defaults }; }), x.id))}
         </div>
         <div className="col-row">
