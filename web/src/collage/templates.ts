@@ -1,11 +1,14 @@
 /**
- * Built in collage templates. Templates are plain data: canvas ratio, photo
+ * Built in collage templates 1 to 18 (19 to 56 live in templates-set2.ts). Templates are plain data: canvas ratio, photo
  * slots, color slots, default palette and layers. To add a template, add an
  * entry to the list returned by `buildTemplates` (see README, "Adding a
  * collage template"). Default texts are picked for the UI language.
  */
 import type { CollageTemplate, Layer, Localized, Paint, ShapeLayer } from './types';
 import { rng } from './textures';
+import { buildTemplatesSet2 } from './templates-set2';
+import { buildTemplatesSet3 } from './templates-set3';
+import { recommendedFor } from './filters';
 
 const S = (slot: string): Paint => ({ slot });
 const C = (color: string): Paint => ({ color });
@@ -31,7 +34,7 @@ const shape = (o: Record<string, unknown>): Layer => ({ kind: 'shape', rot: 0, .
 
 export function buildTemplates(lang: string): CollageTemplate[] {
   const tr = (s: Localized) => s[lang] ?? s.en;
-  return [
+  const set1: CollageTemplate[] = [
     {
       id: 'star-confetti-booth', name: { en: 'Star Confetti Booth', pt: 'Cabine de Estrelas' }, ratio: '9:16', tags: ['stars', 'booth'], photos: 1,
       palette: 'wine-felt', colors: { background: '#7A1F2C', frame: '#111111' }, slots: ['background', 'frame', 'starPrimary'],
@@ -60,7 +63,7 @@ export function buildTemplates(lang: string): CollageTemplate[] {
       ]
     },
     {
-      id: 'ransom-letters', name: { en: 'Ransom Letters', pt: 'Letras Recortadas' }, ratio: '4:5', tags: ['paper', 'stars'], photos: 1,
+      id: 'ransom-letters', name: { en: 'Ransom Letters', pt: 'Letras Recortadas' }, ratio: '4:5', tags: ['paper', 'stars', 'scrapbook'], photos: 1,
       palette: 'wine-felt', colors: { background: '#601E28', starPrimary: '#E9E0D1', paper: '#E9DCC4', tintSecondary: '#FFFFFF', doodleFill: '#B3172D', doodleStroke: '#601E28', text: '#FFFFFF' },
       slots: ['background', 'starPrimary', 'paper', 'tintSecondary', 'doodleFill', 'doodleStroke', 'text'],
       layers: [
@@ -105,7 +108,7 @@ export function buildTemplates(lang: string): CollageTemplate[] {
       ]
     },
     {
-      id: 'sky-silhouette-split', name: { en: 'Sky Silhouette Split', pt: 'Céu e Silhueta' }, ratio: '3:4', tags: ['paper', 'doodle'], photos: 1,
+      id: 'sky-silhouette-split', name: { en: 'Sky Silhouette Split', pt: 'Céu e Silhueta' }, ratio: '3:4', tags: ['paper', 'doodle', 'nature'], photos: 1,
       palette: 'sky-zine', colors: { background: '#D9EDF6', paper3: '#FFFFFF', text: '#1A1A1A', paper: '#F7F3EA' }, slots: ['background', 'paper3', 'text', 'paper'],
       layers: [
         bg({ style: 'sky', paint3: S('paper3'), folds: 'middle' }),
@@ -184,7 +187,7 @@ export function buildTemplates(lang: string): CollageTemplate[] {
       ]
     },
     {
-      id: 'love-wall', name: { en: 'Love Wall', pt: 'Muro do Amor' }, ratio: '9:16', tags: ['duo', 'paper'], photos: 1,
+      id: 'love-wall', name: { en: 'Love Wall', pt: 'Muro do Amor' }, ratio: '9:16', tags: ['duo', 'paper', 'scrapbook'], photos: 1,
       palette: 'olive-love', colors: { background: '#56592A', backgroundSecondary: '#3B3D1C', text: '#C8322B' }, slots: ['background', 'backgroundSecondary', 'text'],
       layers: [
         bg({ texture: 'poster' }),
@@ -199,7 +202,7 @@ export function buildTemplates(lang: string): CollageTemplate[] {
       ]
     },
     {
-      id: 'starburst-postcard', name: { en: 'Starburst Postcard', pt: 'Cartão Explosão' }, ratio: '4:3', tags: ['paper', 'doodle'], photos: 1,
+      id: 'starburst-postcard', name: { en: 'Starburst Postcard', pt: 'Cartão Explosão' }, ratio: '4:3', tags: ['paper', 'doodle', 'scrapbook'], photos: 1,
       palette: 'burnt-orange', colors: { background: '#E1DDDE', doodleFill: '#E2462F' }, slots: ['background', 'doodleFill'],
       layers: [
         bg({ texture: 'watercolor' }),
@@ -235,7 +238,7 @@ export function buildTemplates(lang: string): CollageTemplate[] {
       ]
     },
     {
-      id: 'cobalt-duotone-pop', name: { en: 'Cobalt Duotone Pop', pt: 'Duotone Cobalto' }, ratio: '1:1', tags: ['duo', 'stars'], photos: 1,
+      id: 'cobalt-duotone-pop', name: { en: 'Cobalt Duotone Pop', pt: 'Duotone Cobalto' }, ratio: '1:1', tags: ['duo', 'stars', 'halftone'], photos: 1,
       palette: 'cobalt-duotone', colors: { background: '#F8F4F1', tint: '#023EAC', tintSecondary: '#F8F4F1', starPrimary: '#F26297', starSecondary: '#3A7BEA', doodleFill: '#F5C518', doodleStroke: '#3DAA3D' },
       slots: ['background', 'tint', 'starPrimary', 'starSecondary', 'doodleFill', 'doodleStroke'],
       layers: [
@@ -248,7 +251,7 @@ export function buildTemplates(lang: string): CollageTemplate[] {
       ]
     },
     {
-      id: 'zigzag-rays', name: { en: 'Zigzag Rays', pt: 'Raios em Zigue-Zague' }, ratio: '20:19', tags: ['doodle', 'duo'], photos: 1,
+      id: 'zigzag-rays', name: { en: 'Zigzag Rays', pt: 'Raios em Zigue-Zague' }, ratio: '20:19', tags: ['doodle', 'duo', 'comic'], photos: 1,
       palette: 'mustard-teal', colors: { background: '#F2C230', doodleStroke: '#1F9A8F' }, slots: ['background', 'doodleStroke'],
       layers: [
         bg({ texture: 'paper' }),
@@ -257,6 +260,10 @@ export function buildTemplates(lang: string): CollageTemplate[] {
       ]
     }
   ];
+  const all = set1.concat(buildTemplatesSet2(lang), buildTemplatesSet3(lang));
+  // Recommended filter per template number (filter pairing sheet).
+  all.forEach((tpl, i) => { tpl.filter = tpl.filter ?? recommendedFor(i + 1); });
+  return all;
 }
 
-export const TAGS = ['stars', 'booth', 'paper', 'doodle', 'desktop', 'duo'] as const;
+export const TAGS = ['stars', 'booth', 'paper', 'doodle', 'desktop', 'duo', 'comic', 'scrapbook', 'halftone', 'nature'] as const;

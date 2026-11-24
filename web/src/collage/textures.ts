@@ -150,9 +150,114 @@ export function applyTexture(ctx: CanvasRenderingContext2D, x: number, y: number
     case 'marker':
       fill(noiseTile('grain', 256, 0.5, 0.12), s);
       break;
+    case 'crumpled':
+      fill(wrinkleTile('wrinkle'), s * 2.2, 'source-over', 1);
+      fill(noiseTile('grain', 256, 0.5, 0.12), s);
+      break;
+    case 'notebook':
+      notebook(ctx, x, y, w, h, unit);
+      fill(noiseTile('grain', 256, 0.5, 0.08), s);
+      break;
+    case 'newsprint':
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.fillStyle = 'rgba(236,214,160,0.55)';
+      ctx.fillRect(x, y, w, h);
+      fill(noiseTile('grain', 256, 0.5, 0.16), s);
+      fill(fiberTile('rec-f', true, 520, 9), s, 'source-over', 0.6);
+      break;
+    case 'canvas':
+      fill(crossTile('cross'), s * 1.4);
+      fill(crossTile('cross'), s * 0.7, 'source-over', 0.6);
+      fill(noiseTile('grain', 256, 0.5, 0.1), s);
+      break;
+    case 'denim':
+      fill(crossTile('cross'), s * 0.8, 'source-over', 0.9);
+      fill(fiberTile('denim-f', false, 600, 6), s);
+      fill(noiseTile('grain', 256, 0.5, 0.14), s);
+      break;
+    case 'spray':
+    case 'riso':
+    case 'halftone':
+      fill(dotTile('ht-dots'), s, 'multiply', 0.25);
+      fill(noiseTile('grain', 256, 0.5, 0.12), s);
+      break;
+    case 'oil':
+      fill(blotchTile('blotch'), s * 1.2, 'overlay', 0.9);
+      fill(strokeTile('oil'), s, 'source-over', 0.9);
+      break;
   }
   ctx.restore();
   void seed;
+}
+
+/** Crumpled paper: random facets lit from the top left, tileable. */
+function wrinkleTile(key: string) {
+  return tile(key, 384, (ctx, s) => {
+    const r = rng(41);
+    for (let i = 0; i < 70; i++) {
+      const cx = r() * s, cy = r() * s, rad = 30 + r() * 90;
+      const a0 = r() * Math.PI * 2;
+      for (const [ox, oy] of [[0, 0], [s, 0], [-s, 0], [0, s], [0, -s]]) {
+        ctx.beginPath();
+        for (let k = 0; k < 5; k++) {
+          const a = a0 + (k / 5) * Math.PI * 2 + r() * 0.5;
+          const px = ox + cx + Math.cos(a) * rad * (0.5 + r() * 0.6), py = oy + cy + Math.sin(a) * rad * (0.5 + r() * 0.6);
+          k ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+        }
+        ctx.closePath();
+        const light = Math.cos(a0 - 2.3);
+        ctx.fillStyle = light > 0 ? `rgba(255,255,255,${0.1 * light})` : `rgba(0,0,0,${-0.13 * light})`;
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.09)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    }
+  });
+}
+
+/** Halftone dot grid (black dots on transparent). */
+function dotTile(key: string) {
+  return tile(key, 24, (ctx, s) => {
+    ctx.fillStyle = '#000';
+    for (const [x, y] of [[6, 6], [18, 18]]) { ctx.beginPath(); ctx.arc(x, y, 4.2, 0, Math.PI * 2); ctx.fill(); }
+    void s;
+  });
+}
+
+/** Short oil paint strokes. */
+function strokeTile(key: string) {
+  return tile(key, 256, (ctx, s) => {
+    const r = rng(23);
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 260; i++) {
+      const x = r() * s, y = r() * s, a = r() * Math.PI, len = 6 + r() * 16;
+      ctx.strokeStyle = r() > 0.5 ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)';
+      ctx.lineWidth = 2 + r() * 4;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len); ctx.stroke();
+    }
+  });
+}
+
+/** Notebook ruling with a margin line and faint pencil math scribbles. */
+function notebook(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, unit: number) {
+  const gap = 46 * unit;
+  ctx.strokeStyle = 'rgba(90,120,170,0.35)';
+  ctx.lineWidth = 1.6 * unit;
+  for (let yy = y + gap * 2; yy < y + h; yy += gap) { ctx.beginPath(); ctx.moveTo(x, yy); ctx.lineTo(x + w, yy); ctx.stroke(); }
+  ctx.strokeStyle = 'rgba(200,60,80,0.35)';
+  ctx.beginPath(); ctx.moveTo(x + 90 * unit, y); ctx.lineTo(x + 90 * unit, y + h); ctx.stroke();
+  const r = rng(77);
+  ctx.fillStyle = 'rgba(60,60,70,0.22)';
+  ctx.font = `${30 * unit}px 'Segoe Script', 'Bradley Hand', cursive`;
+  const bits = ['x² + 2x = 8', '√49 = 7', 'a/b', '3 × 4 = 12', 'f(x)', '∑ n', 'y = mx + b', '1/2 + 1/4', 'π r²', '(a+b)²'];
+  for (let i = 0; i < 14; i++) {
+    ctx.save();
+    ctx.translate(x + r() * w, y + gap * (2 + Math.floor(r() * (h / gap))) - 8 * unit);
+    ctx.rotate((r() - 0.5) * 0.1);
+    ctx.fillText(bits[i % bits.length], 0, 0);
+    ctx.restore();
+  }
 }
 
 /** Paper fold creases: a soft shadow and a highlight along each line. */
@@ -214,6 +319,23 @@ export function crayonFill(ctx: CanvasRenderingContext2D, x: number, y: number, 
  * pencil: grain holes are punched out of it.
  */
 export function roughenStroke(ctx: CanvasRenderingContext2D, w: number, h: number, type: Texture, unit: number) {
+  if (type === 'halftone') {
+    // Printed scribble: keep the stroke only where a dot grid is.
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-in';
+    ctx.fillStyle = pattern(ctx, dotTile('ht-dots'), Math.max(0.5, unit));
+    ctx.fillRect(0, 0, w, h);
+    ctx.restore();
+    return;
+  }
+  if (type === 'spray') {
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.fillStyle = pattern(ctx, noiseTile('rough-spray', 256, 0.4, 0.7), Math.max(0.5, unit));
+    ctx.fillRect(0, 0, w, h);
+    ctx.restore();
+    return;
+  }
   if (type !== 'crayon' && type !== 'chalk' && type !== 'pencil') return;
   const density = type === 'chalk' ? 0.32 : type === 'crayon' ? 0.22 : 0.12;
   ctx.save();

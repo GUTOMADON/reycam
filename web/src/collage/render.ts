@@ -9,15 +9,26 @@ import type {
 } from './types';
 import { resolvePaint } from './resolve';
 import { applyTexture, crayonFill, folds, grain, rng, roughenStroke, vignette } from './textures';
-import { drawFrameBack, drawFrameFront, frameInsets, treatPhoto } from './treatments';
+import { drawFrameBack, drawFrameFront, frameInsets, photoFilterKey, setPhotoFilter, treatPhoto } from './treatments';
 import {
   FONTS, PAINT_SWATCHES, drawBin, drawDesktopIcon, drawDialog, drawIcon, drawPaintWindow, drawPatch, drawPointer, drawTiles,
   drawToolbox, isLineShape, materialFill, materialFinish, shapePath
 } from './assets';
 import { hslToHex, withAlpha } from './palettes';
+import { anchorPoints, invalidateFeatures } from './detect';
+import {
+  drawBackgroundExtra, drawBoxes, drawBubble, drawCropWindow, drawHeads, drawLayout, drawPatchwork, drawScribble, drawSketch,
+  drawSticker, drawTorn, drawUiExtra, drawWaves, scanlines, type FxEnv
+} from './effects';
+import {
+  drawBackgroundExtra2, drawFaceDoodle, drawFrost, drawGrunge, drawLeak, drawMosaic, drawOrnament, drawPunch, drawSlices, drawThreshold,
+  drawUiExtra2, finishRiso
+} from './effects2';
+import { applyLook } from './filters';
 
 export const RATIOS: Record<Exclude<Ratio, 'free'>, number> = {
-  '9:16': 9 / 16, '4:5': 4 / 5, '3:4': 3 / 4, '1:1': 1, '4:3': 4 / 3, '5:7': 5 / 7, '2:3': 2 / 3, '20:19': 20 / 19
+  '9:16': 9 / 16, '4:5': 4 / 5, '3:4': 3 / 4, '1:1': 1, '4:3': 4 / 3, '5:7': 5 / 7, '2:3': 2 / 3, '20:19': 20 / 19,
+  '6:7': 6 / 7, '3:5': 3 / 5, '6:5': 6 / 5
 };
 
 export const aspectOf = (doc: Pick<CollageDoc, 'ratio' | 'freeAspect'>) => (doc.ratio === 'free' ? doc.freeAspect || 1 : RATIOS[doc.ratio]);
@@ -50,7 +61,7 @@ export interface RenderOpts {
 // Mask versions, bumped by the refine brushes so cached cutouts refresh.
 const maskVersions = new WeakMap<HTMLCanvasElement, number>();
 export const maskVersion = (m: HTMLCanvasElement) => maskVersions.get(m) || 0;
-export function bumpMask(m: HTMLCanvasElement) { maskVersions.set(m, maskVersion(m) + 1); cutCache.clear(); }
+export function bumpMask(m: HTMLCanvasElement) { maskVersions.set(m, maskVersion(m) + 1); invalidateFeatures(m); cutCache.clear(); }
 
 const cutCache = new Map<string, { canvas: HTMLCanvasElement; pad: number }>();
 
@@ -67,7 +78,16 @@ export function cropRect(p: CollagePhoto, layer: PhotoLayer) {
   const z = Math.max(1, layer.zoom ?? 1);
   let sw: number, sh: number;
   if (iw / ih > A) { sh = ih / z; sw = sh * A; } else { sw = iw / z; sh = sw / A; }
-  return { sx: (iw - sw) / 2, sy: (ih - sh) / 2, sw, sh, aspect: A };
+  // Face crop zoom: center on a manual focus point or a detected feature.
+  let cx = iw / 2, cy = ih / 2;
+  if (layer.focus) { cx = layer.focus[0] * iw; cy = layer.focus[1] * ih; }
+  else if (layer.anchor) {
+    const pts = anchorPoints(p, layer.anchor);
+    const pt = pts[(layer.anchorIndex ?? 0) % Math.max(1, pts.length)];
+    if (pt) { cx = pt.x * iw; cy = pt.y * ih; }
+  }
+  const sx = Math.max(0, Math.min(iw - sw, cx - sw / 2)), sy = Math.max(0, Math.min(ih - sh, cy - sh / 2));
+  return { sx, sy, sw, sh, aspect: A };
 }
 
 /** Photo area of a photo layer in canvas pixels (without the frame). */
@@ -97,7 +117,7 @@ function cutout(p: CollagePhoto, layer: PhotoLayer, treatment: Treatment | undef
   const outH = Math.max(1, Math.round(outW / crop.aspect));
   const ow = Math.round(st.style === 'clean' || st.style === 'silhouette' ? 0 : st.outlineWidth * unit);
   const pad = ow + Math.round(st.shadow ? 18 * unit : 2);
-  const key = [p.id, maskVersion(p.mask), JSON.stringify(treatment), Math.round(outW / 8), JSON.stringify(st), crop.sx | 0, crop.sy | 0, crop.sw | 0, photoMax, treatment ? JSON.stringify(palette) : ''].join('|');
+  const key = [p.id, maskVersion(p.mask), JSON.stringify(treatment), Math.round(outW / 8), JSON.stringify(st), photoFilterKey(), crop.sx | 0, crop.sy | 0, crop.sw | 0, photoMax, treatment ? JSON.stringify(palette) : ''].join('|');
   const hit = cutCache.get(key);
   if (hit) return hit;
 
@@ -173,6 +193,14 @@ export function renderCollage(ctx: CanvasRenderingContext2D, doc: CollageDoc, ph
   const photoMax = opts.photoMax ?? 2400;
   const info: RenderInfo = { boxes: {}, swatches: [], weaveDots: [] };
   const byId = new Map(doc.layers.map((l) => [l.id, l]));
+  const env: FxEnv = {
+    W, H, unit, pal, photos, byId, photoMax, info,
+    begin: (c, l, w, h) => begin(c, l, w, h),
+    subjectMask: (c, pl, p) => drawSubjectMask(c, pl, p, W, H)
+  };
+  const f = doc.filter;
+  setPhotoFilter(f && f.intensity > 0 ? { key: f.id + ':' + f.intensity, apply: (src, key) => applyLook(src, key, f.id, f.intensity) } : null);
+  try {
   ctx.save();
   ctx.clearRect(0, 0, W, H);
   ctx.fillStyle = '#FFFFFF';
@@ -197,6 +225,7 @@ export function renderCollage(ctx: CanvasRenderingContext2D, doc: CollageDoc, ph
   }
 
   if (doc.finish === 'film') finishFilm(ctx, W, H);
+  if (doc.finish === 'riso') finishRiso(ctx, W, H);
   if (doc.dateStamp) drawDateStamp(ctx, W, H, unit);
 
   if (opts.selected && info.boxes[opts.selected]) {
@@ -213,6 +242,9 @@ export function renderCollage(ctx: CanvasRenderingContext2D, doc: CollageDoc, ph
     ctx.restore();
   }
   ctx.restore();
+  } finally {
+    setPhotoFilter(null);
+  }
   return info;
 
   // ------------------------------------------------------------ per layer
@@ -241,6 +273,26 @@ export function renderCollage(ctx: CanvasRenderingContext2D, doc: CollageDoc, ph
       case 'zigzag': return drawZigzag(c, l);
       case 'outline': return drawOutline(c, l);
       case 'draw': return drawStrokes(c, l);
+      case 'heads': return drawHeads(env, c, l);
+      case 'bubble': return drawBubble(env, c, l);
+      case 'torn': return drawTorn(env, c, l);
+      case 'sketch': return drawSketch(env, c, l);
+      case 'scribble': return drawScribble(env, c, l);
+      case 'cropwin': return drawCropWindow(env, c, l);
+      case 'patchwork': return drawPatchwork(env, c, l);
+      case 'layout': return drawLayout(env, c, l);
+      case 'boxes': return drawBoxes(env, c, l);
+      case 'waves': return drawWaves(env, c, l);
+      case 'sticker': return drawSticker(env, c, l);
+      case 'slices': return drawSlices(env, c, l);
+      case 'leak': return drawLeak(env, c, l);
+      case 'grunge': return drawGrunge(env, c, l);
+      case 'mosaic': return drawMosaic(env, c, l);
+      case 'ornament': return drawOrnament(env, c, l);
+      case 'punch': return drawPunch(env, c, l);
+      case 'threshold': return drawThreshold(env, c, l);
+      case 'frost': return drawFrost(env, c, l);
+      case 'facedoodle': return drawFaceDoodle(env, c, l);
     }
   }
 
@@ -336,14 +388,17 @@ export function renderCollage(ctx: CanvasRenderingContext2D, doc: CollageDoc, ph
         const p = photoFor(photos, l.photo);
         c.fillStyle = c1; c.fillRect(0, 0, W, H);
         if (p) {
-          const img = treatPhoto(p.image, p.id, l.bw ? { type: 'bw', contrast: 1.1, grain: 0 } : undefined, pal, Math.min(photoMax, 1600));
+          const img = treatPhoto(p.image, p.id, l.treatment ?? (l.bw ? { type: 'bw', contrast: 1.1, grain: 0 } : undefined), pal, Math.min(photoMax, 1600));
           const k = Math.max(W / img.width, H / img.height);
           if (l.blur) c.filter = `blur(${l.blur * unit}px)`;
           c.drawImage(img, (W - img.width * k) / 2, (H - img.height * k) / 2, img.width * k, img.height * k);
           c.filter = 'none';
         }
+        if (l.overlay) applyTexture(c, 0, 0, W, H, l.overlay, unit);
         break;
       }
+      default:
+        if (!drawBackgroundExtra(env, c, l)) drawBackgroundExtra2(env, c, l);
     }
     if (l.folds && l.folds !== 'none') folds(c, 0, 0, W, H, l.folds, unit);
     c.restore();
@@ -363,13 +418,91 @@ export function renderCollage(ctx: CanvasRenderingContext2D, doc: CollageDoc, ph
       const treated = treatPhoto(p.image, p.id, l.treatment, pal, photoMax);
       const crop = cropRect(p, l);
       const kx = treated.width / p.image.width;
+      const shapeKind = l.windowShape === 'burst' ? 'burst' : l.windowShape === 'rounded' ? 'rect' : l.windowShape === 'star4' ? 'star4' : l.windowShape === 'heart' ? 'heart' : 'star5';
+      const windowPath = () => {
+        if (l.cutout === 'window' && l.windowShape === 'oval') { c.beginPath(); c.ellipse(0, 0, b.w / 2, b.h / 2, 0, 0, Math.PI * 2); }
+        else if (l.cutout === 'window') shapePath(c, shapeKind, b.w, { h: b.h / b.w });
+        else { c.beginPath(); c.rect(x, y, b.w, b.h); }
+      };
+      if (l.frameStars && l.frame !== 'none') {
+        // Small stars printed on the frame margin.
+        const ins2 = frameInsets(l.frame, l.frameMargin);
+        const m = ins2.l * b.w, r2 = rng(5);
+        c.save();
+        c.fillStyle = resolvePaint(l.frameStars, pal, '#4A2A1A');
+        const fx0 = x - m, fy0 = y - ins2.t * b.w, fw = b.w + m * 2, fh = b.h + (ins2.t + ins2.b) * b.w;
+        for (let i = 0; i < 40; i++) {
+          const side = i % 4, t2 = r2();
+          const px = side === 0 || side === 2 ? fx0 + t2 * fw : side === 1 ? fx0 + fw - m / 2 : fx0 + m / 2;
+          const py = side === 1 || side === 3 ? fy0 + t2 * fh : side === 0 ? fy0 + m / 2 : fy0 + fh - m / 2;
+          c.save(); c.translate(px, py); c.rotate(r2() * 6); shapePath(c, 'star5', m * 0.55); c.fill(); c.restore();
+        }
+        c.restore();
+      }
+      if (l.blend) c.globalCompositeOperation = l.blend;
+      if (l.glow) {
+        // Soft glow behind the photo or the window.
+        c.save();
+        windowPath();
+        c.shadowColor = resolvePaint(l.glow, pal, '#FFFFFF');
+        c.shadowBlur = 40 * unit;
+        c.fillStyle = c.shadowColor;
+        c.fill();
+        c.restore();
+      }
       c.save();
-      if (l.cutout === 'window') {
-        shapePath(c, l.windowShape === 'burst' ? 'burst' : l.windowShape === 'rounded' ? 'rect' : 'star5', b.w, { h: b.h / b.w });
-        c.clip();
+      if (l.cutout === 'window' && l.feather) {
+        // Soft edged window (head portal): mask the photo with a blurred shape on its own canvas.
+        const pad = Math.round(l.feather * b.w * 0.25);
+        const off = document.createElement('canvas');
+        off.width = Math.ceil(b.w + pad * 2); off.height = Math.ceil(b.h + pad * 2);
+        const oc = off.getContext('2d')!;
+        oc.drawImage(treated, crop.sx * kx, crop.sy * kx, crop.sw * kx, crop.sh * kx, pad, pad, b.w, b.h);
+        if (l.vignette) {
+          const g = oc.createRadialGradient(off.width / 2, off.height / 2, b.w * 0.15, off.width / 2, off.height / 2, b.w * 0.55);
+          g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, `rgba(0,0,0,${l.vignette})`);
+          oc.fillStyle = g; oc.fillRect(0, 0, off.width, off.height);
+        }
+        const mk = document.createElement('canvas');
+        mk.width = off.width; mk.height = off.height;
+        const mc = mk.getContext('2d')!;
+        mc.filter = `blur(${pad * 0.5}px)`;
+        mc.fillStyle = '#000';
+        mc.beginPath(); mc.ellipse(off.width / 2, off.height / 2, b.w / 2 - pad * 0.3, b.h / 2 - pad * 0.3, 0, 0, Math.PI * 2); mc.fill();
+        oc.globalCompositeOperation = 'destination-in';
+        oc.drawImage(mk, 0, 0);
+        c.drawImage(off, x - pad, y - pad);
+      } else {
+      if (l.cutout === 'window') { windowPath(); c.clip(); }
+      if (l.rgbSplit) {
+        // RGB split glow: red and blue copies shifted under the photo.
+        const d = l.rgbSplit * unit;
+        c.save(); c.globalCompositeOperation = 'screen'; c.filter = `blur(${d * 0.6}px)`;
+        c.globalAlpha = 0.8;
+        c.drawImage(treated, crop.sx * kx, crop.sy * kx, crop.sw * kx, crop.sh * kx, x - d, y, b.w, b.h);
+        c.restore();
       }
       c.drawImage(treated, crop.sx * kx, crop.sy * kx, crop.sw * kx, crop.sh * kx, x, y, b.w, b.h);
+      if (l.rgbSplit) {
+        const d = l.rgbSplit * unit;
+        c.save(); c.globalCompositeOperation = 'screen'; c.globalAlpha = 0.35;
+        c.fillStyle = '#FF2A6A'; c.fillRect(x - d, y, b.w, b.h);
+        c.fillStyle = '#2A8AFF'; c.fillRect(x + d, y, b.w, b.h);
+        c.restore();
+      }
+      }
+      if (l.scanlines) scanlines(c, x, y, b.w, b.h, l.scanlines, unit);
       c.restore();
+      if (l.stroke) {
+        c.save();
+        windowPath();
+        c.strokeStyle = resolvePaint(l.stroke, pal, '#FFFFFF');
+        c.lineWidth = (l.strokeWidth ?? 4) * unit;
+        c.lineJoin = 'round';
+        if (l.glow) { c.shadowColor = c.strokeStyle; c.shadowBlur = 18 * unit; }
+        c.stroke();
+        c.restore();
+      }
       drawFrameFront(c, l.frame, x, y, b.w, b.h, unit, 3);
     } else {
       const st: CutStyle = {
@@ -382,7 +515,9 @@ export function renderCollage(ctx: CanvasRenderingContext2D, doc: CollageDoc, ph
       };
       const cut = cutout(p, l, l.treatment, pal, Math.round(b.w), st, unit, photoMax);
       const k = b.w / (cut.canvas.width - cut.pad * 2);
+      if (l.glow) { c.shadowColor = resolvePaint(l.glow, pal, '#FFFFFF'); c.shadowBlur = 36 * unit; }
       c.drawImage(cut.canvas, x - cut.pad * k, y - cut.pad * k, cut.canvas.width * k, cut.canvas.height * k);
+      c.shadowColor = 'transparent';
     }
     c.restore();
   }
@@ -395,7 +530,7 @@ export function renderCollage(ctx: CanvasRenderingContext2D, doc: CollageDoc, ph
     const b = photoBox(of, p, W, H);
     c.save();
     c.globalAlpha = l.opacity ?? 1;
-    c.translate(b.cx, b.cy);
+    c.translate(b.cx + (l.dx ?? 0) * W, b.cy + (l.dy ?? 0) * H);
     c.rotate(b.rot * D2R);
     if (of.flip) c.scale(-1, 1);
     const ins = frameInsets(of.frame, of.frameMargin);
@@ -410,7 +545,30 @@ export function renderCollage(ctx: CanvasRenderingContext2D, doc: CollageDoc, ph
     };
     const cut = cutout(p, of, l.treatment ?? of.treatment, pal, Math.round(b.w), st, unit, photoMax);
     const k = b.w / (cut.canvas.width - cut.pad * 2);
-    c.drawImage(cut.canvas, -b.w / 2 - cut.pad * k, -b.h / 2 - cut.pad * k, cut.canvas.width * k, cut.canvas.height * k);
+    let src: HTMLCanvasElement = cut.canvas;
+    if (l.clippings && l.cutout === 'silhouette') {
+      // Silhouette fill collage: tiny paper clippings inside the shape.
+      src = document.createElement('canvas');
+      src.width = cut.canvas.width; src.height = cut.canvas.height;
+      const sc = src.getContext('2d')!;
+      sc.drawImage(cut.canvas, 0, 0);
+      sc.globalCompositeOperation = 'source-atop';
+      const r = rng(19);
+      const inks = ['#F2E6C8', '#1A1A1A', '#F28CC0', '#2A4AE0', '#F2C21A', '#FFFFFF', '#3DAA3D'];
+      const s = 22 * unit / k;
+      for (let i = 0; i < (src.width * src.height) / (s * s * 3); i++) {
+        sc.save();
+        sc.translate(r() * src.width, r() * src.height);
+        sc.rotate((r() - 0.5) * 1.2);
+        sc.fillStyle = inks[Math.floor(r() * inks.length)];
+        sc.globalAlpha = 0.85;
+        sc.fillRect(-s * (0.3 + r()), -s * (0.2 + r() * 0.6), s * (0.6 + r() * 1.4), s * (0.4 + r()));
+        if (r() > 0.6) { sc.fillStyle = 'rgba(0,0,0,0.5)'; sc.fillRect(-s * 0.4, -s * 0.1, s * 0.8, s * 0.06); }
+        sc.restore();
+      }
+    }
+    if (l.glow) { c.shadowColor = resolvePaint(l.glow, pal, '#FFFFFF'); c.shadowBlur = 36 * unit; }
+    c.drawImage(src, -b.w / 2 - cut.pad * k, -b.h / 2 - cut.pad * k, cut.canvas.width * k, cut.canvas.height * k);
     c.restore();
   }
 
@@ -450,6 +608,7 @@ export function renderCollage(ctx: CanvasRenderingContext2D, doc: CollageDoc, ph
     target.shadowColor = 'transparent';
     if (strokeCol || isLineShape(l.shape)) {
       target.save();
+      if (tex === 'spray') { target.shadowColor = strokeCol || fillCol || '#000'; target.shadowBlur = (l.strokeWidth ?? 6) * unit * 2.5; }
       const o = (l.offset ?? 0) * size;
       target.translate(o, -o * 0.6);
       shapePath(target, l.shape, size, opts);
@@ -482,13 +641,60 @@ export function renderCollage(ctx: CanvasRenderingContext2D, doc: CollageDoc, ph
     const lines = l.text.split('\n');
     const tw = Math.max(...lines.map((s) => c.measureText(s).width), fs);
     c.restore();
-    begin(c, l, tw, fs * 1.2 * lines.length);
-    c.font = `${l.font === 'pixel' ? 400 : 700} ${fs}px ${FONTS[l.font]}`;
-    c.fillStyle = resolvePaint(l.paint, pal, '#FFFFFF');
+    const th = fs * 1.2 * lines.length;
+    begin(c, l, tw, th);
+    if (l.bg) {
+      // Paper strip, tilted tag with a hole, or translucent washi tape.
+      const px = fs * 0.4, py = fs * 0.15;
+      c.save();
+      c.fillStyle = resolvePaint(l.bg, pal, '#FFFFFF');
+      c.shadowColor = 'rgba(0,0,0,0.25)'; c.shadowBlur = 6 * unit; c.shadowOffsetY = 2 * unit;
+      if (l.bgStyle === 'tape') { c.globalAlpha *= 0.82; c.shadowColor = 'transparent'; }
+      c.beginPath();
+      if (l.bgStyle === 'tag') {
+        const x0 = -tw / 2 - px * 2.2, x1 = tw / 2 + px, y0 = -th / 2 - py, y1 = th / 2 + py;
+        c.moveTo(x0 + (y1 - y0) / 2, y0); c.lineTo(x1, y0); c.lineTo(x1, y1); c.lineTo(x0 + (y1 - y0) / 2, y1); c.lineTo(x0, 0); c.closePath();
+        c.fill();
+        c.globalCompositeOperation = 'destination-out';
+        c.beginPath(); c.arc(x0 + (y1 - y0) * 0.45, 0, fs * 0.12, 0, Math.PI * 2); c.fill();
+      } else if (l.bgStyle === 'tape') {
+        const r = rng(l.text.length + 3);
+        const x0 = -tw / 2 - px, x1 = tw / 2 + px, y0 = -th / 2 - py, y1 = th / 2 + py;
+        c.moveTo(x0, y0);
+        for (let i = 0; i <= 6; i++) c.lineTo(x1 + (i % 2 ? -1 : 1) * fs * 0.06, y0 + (i / 6) * (y1 - y0));
+        for (let i = 6; i >= 0; i--) c.lineTo(x0 + (i % 2 ? 1 : -1) * fs * 0.06 + r() * 0.01, y0 + (i / 6) * (y1 - y0));
+        c.fill();
+      } else {
+        c.rect(-tw / 2 - px, -th / 2 - py, tw + px * 2, th + py * 2);
+        c.fill();
+      }
+      c.restore();
+    }
+    c.font = `${l.font === 'pixel' || l.font === 'typewriter' ? 400 : 700} ${fs}px ${FONTS[l.font]}`;
     c.textAlign = l.align ?? 'center';
     c.textBaseline = 'middle';
     const ax = c.textAlign === 'left' ? -tw / 2 : c.textAlign === 'right' ? tw / 2 : 0;
-    lines.forEach((s, i) => c.fillText(s, ax, (i - (lines.length - 1) / 2) * fs * 1.2));
+    const ly = (i: number) => (i - (lines.length - 1) / 2) * fs * 1.2;
+    if (l.stroke) {
+      // Offset outline: a thick stroke shifted down right, like a sticker title.
+      c.save();
+      c.strokeStyle = resolvePaint(l.stroke, pal, '#FFFFFF');
+      c.lineWidth = (l.strokeWidth ?? 14) * unit;
+      c.lineJoin = 'round';
+      c.translate(fs * 0.04, fs * 0.05);
+      lines.forEach((s, i) => c.strokeText(s, ax, ly(i)));
+      c.fillStyle = c.strokeStyle;
+      lines.forEach((s, i) => c.fillText(s, ax, ly(i)));
+      c.restore();
+    }
+    c.fillStyle = resolvePaint(l.paint, pal, '#FFFFFF');
+    lines.forEach((s, i) => c.fillText(s, ax, ly(i)));
+    if (l.texture && l.texture !== 'none') {
+      c.save();
+      c.globalCompositeOperation = 'source-atop';
+      applyTexture(c, -tw / 2 - fs, -th / 2 - fs, tw + fs * 2, th + fs * 2, l.texture, unit);
+      c.restore();
+    }
     c.restore();
   }
 
@@ -534,6 +740,8 @@ export function renderCollage(ctx: CanvasRenderingContext2D, doc: CollageDoc, ph
     const accent = resolvePaint(l.paint2, pal, '#5B8DEF');
     const bar = resolvePaint(l.paint, pal, '#2A3F8F');
     const style = l.style ?? 'flat';
+    if (l.widget === 'window' || l.widget === 'taskbar' || l.widget === 'camera') { drawUiExtra(env, c, l); return; }
+    if (l.widget === 'playback' || l.widget === 'compact' || l.widget === 'swatch') { drawUiExtra2(env, c, l); return; }
     switch (l.widget) {
       case 'dialog':
         begin(c, l, w, h);
@@ -597,6 +805,14 @@ export function renderCollage(ctx: CanvasRenderingContext2D, doc: CollageDoc, ph
     // Catmull-Rom through the points, sampled per segment.
     const pts = l.points.map(([px, py]) => [(px - 0.5) * w, (py - 0.5) * h] as [number, number]);
     const segs: [number, number][][] = [];
+    if (l.straight) {
+      // Thread connectors: straight lines between pins, with a little sag.
+      for (let i = 0; i < pts.length - 1; i++) {
+        const [x0, y0] = pts[i], [x1, y1] = pts[i + 1];
+        segs.push(Array.from({ length: 17 }, (_, k) => { const s = k / 16; return [x0 + (x1 - x0) * s, y0 + (y1 - y0) * s + Math.sin(s * Math.PI) * 6 * unit] as [number, number]; }));
+      }
+      return segs;
+    }
     for (let i = 0; i < pts.length - 1; i++) {
       const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
       const seg: [number, number][] = [];
@@ -648,6 +864,22 @@ export function renderCollage(ctx: CanvasRenderingContext2D, doc: CollageDoc, ph
       c.drawImage(off, 0, 0);
       c.restore();
     }
+    if (l.pins) {
+      const pinCol = resolvePaint(l.pins, pal, '#FFFFFF');
+      c.save();
+      c.translate(l.x * W, l.y * H);
+      c.rotate(l.rot * D2R);
+      if (l.flip) c.scale(-1, 1);
+      for (const [px, py] of l.points) {
+        const x = (px - 0.5) * w, y = (py - 0.5) * h, rr = 13 * unit;
+        c.shadowColor = 'rgba(0,0,0,0.4)'; c.shadowBlur = 6 * unit; c.shadowOffsetY = 3 * unit;
+        const g = c.createRadialGradient(x - rr * 0.35, y - rr * 0.35, rr * 0.1, x, y, rr);
+        g.addColorStop(0, '#FFFFFF'); g.addColorStop(1, pinCol);
+        c.fillStyle = g;
+        c.beginPath(); c.arc(x, y, rr, 0, Math.PI * 2); c.fill();
+      }
+      c.restore();
+    }
     if (opts.weaveFor === l.id) {
       c.save();
       c.translate(l.x * W, l.y * H);
@@ -678,7 +910,23 @@ export function renderCollage(ctx: CanvasRenderingContext2D, doc: CollageDoc, ph
     oc.lineJoin = 'miter';
     oc.lineCap = 'round';
     const maxR = Math.max(w, h);
-    for (let i = 0; i < l.count; i++) {
+    if (l.mode === 'rays') {
+      // Crayon rays from behind the subject: a few parallel strokes per ray.
+      const r = rng(l.seed ?? 5);
+      const n = Math.max(3, l.count);
+      for (let i = 0; i < n; i++) {
+        const a = Math.PI + ((i + 0.5) / n) * Math.PI + (r() - 0.5) * 0.08;
+        const r0 = maxR * 0.12, r1 = maxR * 0.5 * (l.length ?? 0.8) * (0.8 + r() * 0.3);
+        for (let k = -1; k <= 1; k++) {
+          const off = k * l.width * unit * 0.8;
+          oc.beginPath();
+          oc.moveTo(Math.cos(a) * r0 - Math.sin(a) * off, Math.sin(a) * r0 + Math.cos(a) * off);
+          oc.lineTo(Math.cos(a) * r1 - Math.sin(a) * off * 0.6, Math.sin(a) * r1 + Math.cos(a) * off * 0.6);
+          oc.stroke();
+        }
+      }
+    }
+    for (let i = 0; i < (l.mode === 'rays' ? 0 : l.count); i++) {
       const rad = maxR * (0.25 + (i / Math.max(1, l.count - 1)) * 0.75) * 0.5;
       const teeth = 10 + i * 4, amp = rad * 0.08;
       oc.beginPath();
@@ -725,6 +973,17 @@ export function renderCollage(ctx: CanvasRenderingContext2D, doc: CollageDoc, ph
     oc.globalCompositeOperation = 'source-in';
     oc.fillStyle = resolvePaint(l.paint, pal, '#F2C230');
     oc.fillRect(0, 0, outer.width, outer.height);
+    if (l.dash) {
+      // Stitch look: punch regular gaps out of the ring with crossing stripes.
+      const sw = 16 * unit;
+      oc.globalCompositeOperation = 'destination-out';
+      oc.fillStyle = '#000';
+      oc.save();
+      oc.rotate(Math.PI / 4);
+      const R = Math.hypot(outer.width, outer.height);
+      for (let x = -R; x < R; x += sw * 2) oc.fillRect(x, -R, sw * 0.8, R * 2);
+      oc.restore();
+    }
     oc.globalCompositeOperation = 'source-over';
     roughenStroke(oc, outer.width, outer.height, l.texture, unit);
     c.save();
