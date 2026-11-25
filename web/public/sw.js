@@ -1,5 +1,5 @@
-// Offline cache for the app shell. Media never leaves the device.
-const CACHE = 'reycam-v2';
+﻿// Offline cache for the app shell. Media never leaves the device.
+const CACHE = 'reycam-v3-1.2.0';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './favicon.svg', './sample.jpg', './vt323.woff2', './inter-400.woff2', './inter-600.woff2', './inter-700.woff2', './space-grotesk-700.woff2'];
 
 self.addEventListener('install', (e) => {

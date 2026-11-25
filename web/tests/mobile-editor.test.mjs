@@ -102,7 +102,9 @@ try {
         iconsInsideContent: iconRects.every((rect) => rect.top >= navRect.top && rect.bottom <= contentBottom)
       };
     });
-    check(navLayout.safePadding >= 24, `${width}px bottom navigation reserves room for the system bar`);
+    // Web: only the safe-area inset (min 6px). The Android app adds its own clearance via .android-app.
+    check(navLayout.safePadding >= 6 && navLayout.safePadding <= 40, `${width}px bottom navigation is padded only by the safe area`);
+    check(Math.abs(navLayout.navBottom - navLayout.viewportBottom) < 1, `${width}px bottom navigation sits flush with the bottom edge`);
     check(navLayout.navBottom <= navLayout.viewportBottom + 1 && navLayout.iconsInsideContent, `${width}px bottom navigation icons stay clear of the screen edge`);
 
     check(
@@ -129,10 +131,11 @@ try {
           bodyWidth: document.body.scrollWidth,
           toolbarWidth: toolbar.clientWidth,
           toolbarScroll: toolbar.scrollWidth,
-          toolbarVerticalScroll: toolbar.scrollHeight > toolbar.clientHeight && getComputedStyle(toolbar).overflowY === 'auto',
+          toolbarFitsOrScrolls: toolbar.scrollHeight <= toolbar.clientHeight + 1 || getComputedStyle(toolbar).overflowY === 'auto',
           quickScroll: quick ? quick.scrollWidth : 0,
           intensityFirst: !!quick && toolbar.querySelector('.inline-range.grow').compareDocumentPosition(quick) & Node.DOCUMENT_POSITION_FOLLOWING,
-          previewWidth: canvas.getBoundingClientRect().width,
+          previewWidth: preview.width,
+          previewFillsArea: (() => { const area = document.querySelector('.stage-canvas').getBoundingClientRect(); return preview.width >= area.width - 2 || preview.height >= area.height - 2; })(),
           previewInsideStage: preview.top >= stage.top - 1 && preview.bottom <= stage.bottom + 1,
           ranges: ranges.map((el) => ({ height: parseFloat(getComputedStyle(el).height) })),
           rects,
@@ -142,9 +145,9 @@ try {
       check(state.scrollWidth <= width && state.bodyWidth <= width, `${width}px ${id}: no page-level horizontal overflow`);
       check(state.toolbarScroll <= state.toolbarWidth + 1 && state.quickScroll <= state.toolbarWidth + 1, `${width}px ${id}: quick controls fit without clipping`);
       check(state.intensityFirst, `${width}px ${id}: intensity precedes its filter options`);
-      check(state.previewWidth >= width - 48, `${width}px ${id}: preview uses the available width (${state.previewWidth.toFixed(1)}px)`);
+      check(state.previewFillsArea, `${width}px ${id}: preview fills the photo area by width or height (${state.previewWidth.toFixed(1)}px wide)`);
       check(state.previewInsideStage, `${width}px ${id}: preview stays visible inside the photo area`);
-      check(state.toolbarVerticalScroll, `${width}px ${id}: long filter controls scroll vertically inside the toolbar`);
+      check(state.toolbarFitsOrScrolls, `${width}px ${id}: filter controls fit or scroll vertically inside the toolbar`);
       check(state.ranges.every((range) => range.height >= 44), `${width}px ${id}: sliders have 44px touch targets`);
       check(state.rects.every((rect) => rect.left >= -1 && rect.right <= width + 1), `${width}px ${id}: all chips and sliders stay inside the viewport`);
 

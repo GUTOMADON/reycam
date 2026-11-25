@@ -1,6 +1,7 @@
 import { BANDS, type EditState, type Recipe } from '../engine/types';
 import { formatDate, stampColorOf } from '../engine/pipeline';
 import type { Strings } from '../i18n';
+import type { CSSProperties } from 'react';
 
 type SetAdj = (key: string, value: number) => void;
 type SetEdit = (patch: Partial<EditState>) => void;
@@ -37,7 +38,7 @@ export function Slider({ label, value, min, max, onChange, swatch, suffix, basel
         max={max}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        style={{ background: `linear-gradient(90deg, var(--track) ${fillFrom}%, var(--wine-2) ${fillFrom}%, var(--wine-2) ${fillTo}%, var(--track) ${fillTo}%)` }}
+        style={{ '--fill': `linear-gradient(90deg, var(--track) ${fillFrom}%, var(--wine-2) ${fillFrom}%, var(--wine-2) ${fillTo}%, var(--track) ${fillTo}%)` } as CSSProperties}
       />
     </label>
   );

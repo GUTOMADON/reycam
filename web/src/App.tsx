@@ -16,6 +16,22 @@ import { CropPanel, FramePanel, GradingPanel, HslPanel, LayerPanel, Pills, Retou
 import { CAT_KEY, Heart, Library, descOf } from './components/Library';
 import { listDrafts, type DraftSummary } from './collage/doc';
 
+/** Ref callback that sets data-more="true" while a scroll box still has content below the fold. */
+const hintObservers = new WeakMap<HTMLElement, () => void>();
+function scrollHint(el: HTMLElement | null) {
+  if (!el || hintObservers.has(el)) return;
+  const update = () => { el.dataset.more = String(el.scrollHeight - el.scrollTop - el.clientHeight > 4); };
+  el.addEventListener('scroll', update, { passive: true });
+  if (typeof ResizeObserver !== 'undefined') {
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    const mo = new MutationObserver(update);
+    mo.observe(el, { childList: true, subtree: true });
+  }
+  hintObservers.set(el, update);
+  update();
+}
+
 type Media = { type: 'photo' | 'video'; el: HTMLImageElement | HTMLVideoElement | ImageBitmap; w: number; h: number; name: string; sample?: boolean; file?: File };
 type ExportOpts = { format: string; quality: number; size: string; fps: number };
 const isImageBitmap = (source: unknown): source is ImageBitmap => typeof ImageBitmap !== 'undefined' && source instanceof ImageBitmap;
@@ -232,7 +248,7 @@ export default function App() {
   }, [renderTo, isMobile, fitPreview]);
   // Track the stage size without forcing layout on every frame
   useEffect(() => {
-    const stage = canvasRef.current?.parentElement;
+    const stage = canvasRef.current?.closest('.stage-canvas') as HTMLElement | null;
     if (!stage || typeof ResizeObserver === 'undefined') return;
     const ro = new ResizeObserver((entries) => {
       const r = entries[0].contentRect;
@@ -1041,7 +1057,6 @@ export default function App() {
 
         <section className={isMobile && tool ? "center tool-on" : "center"}>
           <div className="stage">
-            <canvas ref={canvasRef} className="preview" />
             <div className="stage-chips">
               <span className="chip solid">{recipe.name}</span>
               {recipe.id !== 'original' && (
@@ -1050,10 +1065,41 @@ export default function App() {
                 </button>
               )}
               {comparing && <span className="chip cream">{t.original}</span>}
+            {isMobile && (
+              <div className="mobile-history" role="group" aria-label={t.editHistory}>
+                <button type="button" className="history-btn" aria-label={t.undo} onClick={undo} disabled={!history.current.past.length}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M9 14L4 9l5-5" /><path d="M4 9h10a6 6 0 010 12h-3" /></svg>
+                  <span>{t.undo}</span>
+                </button>
+                <button type="button" className="history-btn" aria-label={t.redo} onClick={redo} disabled={!history.current.future.length}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M15 14l5-5-5-5" /><path d="M20 9H10a6 6 0 000 12h3" /></svg>
+                  <span>{t.redo}</span>
+                </button>
+                <button
+                  type="button"
+                  className={comparing ? 'history-btn on' : 'history-btn'}
+                  aria-label={t.compare}
+                  onPointerDown={() => setComparing(true)}
+                  onPointerUp={() => setComparing(false)}
+                  onPointerLeave={() => setComparing(false)}
+                  onPointerCancel={() => setComparing(false)}
+                  onContextMenu={(e) => e.preventDefault()}
+                >
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3" /><path d="M12 4v16" /></svg>
+                  <span>{t.compareShort}</span>
+                </button>
+              </div>
+            )}
             </div>
-            <button type="button" className="stage-fullscreen" aria-label={t.fullscreen} title={t.fullscreen} disabled={!media} onClick={() => setFullscreenOpen(true)}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5M3 8l6-6M21 8l-6-6M3 16l6 6M21 16l-6 6" /></svg>
-            </button>
+            {/* The canvas area is measured by the ResizeObserver; the wrap hugs the photo so the fullscreen button sits inside it. */}
+            <div className="stage-canvas">
+              <div className="preview-wrap">
+                <canvas ref={canvasRef} className="preview" />
+                <button type="button" className="stage-fullscreen" aria-label={t.fullscreen} title={t.fullscreen} disabled={!media} onClick={() => setFullscreenOpen(true)}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5" /></svg>
+                </button>
+              </div>
+            </div>
             {busy && (
               <div className="busy" role="status">
                 <span>{busy.label}{busy.pct ? ` ${busy.pct}%` : ''}</span>
@@ -1063,33 +1109,9 @@ export default function App() {
             )}
             {dragOver && <div className="drop">{t.dropHere}</div>}
           </div>
-          {isMobile && (
-            <div className="mobile-history" role="group" aria-label={t.editHistory}>
-              <button type="button" className="history-btn" aria-label={t.undo} onClick={undo} disabled={!history.current.past.length}>
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M9 14L4 9l5-5" /><path d="M4 9h10a6 6 0 010 12h-3" /></svg>
-                <span>{t.undo}</span>
-              </button>
-              <button type="button" className="history-btn" aria-label={t.redo} onClick={redo} disabled={!history.current.future.length}>
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M15 14l5-5-5-5" /><path d="M20 9H10a6 6 0 000 12h3" /></svg>
-                <span>{t.redo}</span>
-              </button>
-              <button
-                type="button"
-                className={comparing ? 'history-btn on' : 'history-btn'}
-                aria-label={t.compare}
-                onPointerDown={() => setComparing(true)}
-                onPointerUp={() => setComparing(false)}
-                onPointerLeave={() => setComparing(false)}
-                onPointerCancel={() => setComparing(false)}
-                onContextMenu={(e) => e.preventDefault()}
-              >
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3" /><path d="M12 4v16" /></svg>
-                <span>{t.compareShort}</span>
-              </button>
-            </div>
-          )}
+
           {media?.sample && !isMobile && <p className="note center-note">{t.sampleNote}</p>}
-          <div className="toolbar">
+          <div className="toolbar" ref={scrollHint}>
             {!isMobile && <>
             <button
               type="button"
@@ -1161,7 +1183,7 @@ export default function App() {
                   {t.done}
                 </button>
               </div>
-              <div className="tool-dock-body">{panelBody(tool)}</div>
+              <div className="tool-dock-body" ref={scrollHint}>{panelBody(tool)}</div>
             </div>
           )}
           {isMobile && !tool && (
