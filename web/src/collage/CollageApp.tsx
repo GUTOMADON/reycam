@@ -41,6 +41,7 @@ interface Props {
   appT: Strings;
   isMobile: boolean;
   showToast: (s: string) => void;
+  initialDraftId?: string;
   onClose: () => void;
 }
 
@@ -68,7 +69,7 @@ function fullMask(img: HTMLCanvasElement) {
   return m;
 }
 
-export default function CollageApp({ lang, appT, isMobile, showToast, onClose }: Props) {
+export default function CollageApp({ lang, appT, isMobile, showToast, initialDraftId, onClose }: Props) {
   const t = collageStrings(lang);
   const templates = useMemo(() => buildTemplates(lang), [lang]);
   const [screen, setScreen] = useState<Screen>('gallery');
@@ -358,6 +359,8 @@ export default function CollageApp({ lang, appT, isMobile, showToast, onClose }:
     setSelected(null);
     setScreen('editor');
   };
+
+  useEffect(() => { if (initialDraftId) void openDraft(initialDraftId); }, [initialDraftId]);
 
   // ------------------------------------------------------------ rendering
 

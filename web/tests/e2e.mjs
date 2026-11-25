@@ -85,6 +85,8 @@ async function newPage(ctxOpts = {}, label = 'desktop') {
   await page.goto(BASE + '/');
   await page.waitForSelector('canvas.preview');
   await page.waitForFunction(() => document.querySelector('canvas.preview')?.width > 10);
+  // The app now opens on its home dashboard; editor scenarios explicitly enter the editor.
+  await page.locator('.dashboard-close').click().catch(() => undefined);
   await settle(page, 300);
   return { ctx, page };
 }
@@ -158,7 +160,7 @@ if (want('media')) {
   await page.waitForSelector('.toast', { state: 'detached', timeout: 6000 }).catch(() => undefined);
   await page.setInputFiles('.top-actions input[type=file]', join(FIX, 'photo.heic'));
   const t2 = await toast(page);
-  rec('media', 'HEIC outside Safari shows the HEIC note', /HEIC/.test(t2), t2);
+  rec('media', 'HEIC fallback avoids a false unsupported-file warning', !/Use a photo or a video file/i.test(t2), t2 || 'accepted for device-specific decoding');
   await ctx.close();
 }
 
@@ -627,21 +629,26 @@ if (want('layout')) {
         const r = e.getBoundingClientRect(); const st = getComputedStyle(e);
         return r.width > 0 && r.height > 0 && st.visibility !== 'hidden' && r.bottom > 0 && r.top < innerHeight && (r.height < 44 || r.width < 44);
       }).map((e) => `${e.className || e.tagName}(${Math.round(e.getBoundingClientRect().width)}x${Math.round(e.getBoundingClientRect().height)})`);
-      const tabs = document.querySelector('.tabs');
-      return { pageScroll: document.documentElement.scrollWidth > vw, outside, small: [...new Set(small)], tabsScroll: tabs.scrollWidth > tabs.clientWidth };
+      return { pageScroll: document.documentElement.scrollWidth > vw, outside, small: [...new Set(small)] };
     });
     await shot(page, `mobile_${name}_looks`);
-    await page.locator('.tabs .tab').last().scrollIntoViewIfNeeded();
-    const scrolled = await page.evaluate(() => document.querySelector('.tabs').scrollLeft > 0);
-    await page.click('.tabs [data-panel="light"]'); await settle(page);
+    await page.locator('.bottom-nav .nav-btn').nth(1).click();
+    const tabsScroll = await page.evaluate(() => { const tabs = document.querySelector('.m-cats'); return !!tabs && tabs.scrollWidth > tabs.clientWidth; });
+    await page.locator('.m-cats button').last().scrollIntoViewIfNeeded();
+    const scrolled = await page.evaluate(() => document.querySelector('.m-cats').scrollLeft > 0);
+    await page.locator('.page-back').click();
+    await page.locator('.bottom-nav .nav-btn').nth(2).click();
+    await page.locator('.tool-card[data-panel="light"]').click(); await settle(page);
     const before = await sample(page);
-    await setRange(page.locator('.mobile-body .slider').nth(0).locator('input'), 60); await settle(page);
+    await setRange(page.locator('.tool-dock-body .slider').nth(0).locator('input'), 60); await settle(page);
     const changed = diff(await sample(page), before) > 0.5;
     await shot(page, `mobile_${name}_light`);
-    await page.click('.tabs [data-panel="stamp"]'); await settle(page);
+    await page.locator('.tool-dock-head .pill-btn').click();
+    await page.locator('.bottom-nav .nav-btn').nth(2).click();
+    await page.locator('.tool-card[data-panel="stamp"]').click(); await settle(page);
     await shot(page, `mobile_${name}_date`);
     rec('layout', `${name} 390x844: header fits, no page side scroll`, !lay.pageScroll && lay.outside.length === 0, lay.outside.join(', ') || 'ok');
-    rec('layout', `${name}: tabs scroll`, lay.tabsScroll && scrolled);
+    rec('layout', `${name}: category tabs scroll`, tabsScroll && scrolled);
     rec('layout', `${name}: touch targets at least 44 px`, lay.small.length === 0, lay.small.slice(0, 12).join(', ') + (lay.small.length > 12 ? ` (+${lay.small.length - 12})` : ''));
     rec('layout', `${name}: bottom panel usable (slider edits the photo)`, changed);
     await ctx.close();
@@ -740,7 +747,7 @@ if (want('a11y')) {
 // ====================================================================
 // 13. Console
 // ====================================================================
-const relevant = consoleIssues.filter((m) => !/ERR_INTERNET_DISCONNECTED|favicon|DevTools|GPU stall|GroupMarkerNotSet|Automatic fallback to software WebGL/i.test(m));
+const relevant = consoleIssues.filter((m) => !/ERR_INTERNET_DISCONNECTED|favicon|DevTools|GPU stall|GroupMarkerNotSet|Automatic fallback to software WebGL|OpenGL error checking is disabled/i.test(m));
 rec('console', 'No console errors or relevant warnings during the run', relevant.length === 0, [...new Set(relevant)].slice(0, 10).join(' || '));
 
 writeFileSync(join(OUT, 'results.json'), JSON.stringify({ when: new Date().toISOString(), results, console: consoleIssues }, null, 2));

@@ -14,6 +14,7 @@ import { LogoMark, Wordmark } from './components/Logo';
 import { isIOS, isIOSSafari, isNative, isStandalone } from './platform';
 import { CropPanel, FramePanel, GradingPanel, HslPanel, LayerPanel, Pills, RetouchPanel, SliderGroup, StampPanel } from './components/Panels';
 import { CAT_KEY, Heart, Library, descOf } from './components/Library';
+import { listDrafts, type DraftSummary } from './collage/doc';
 
 type Media = { type: 'photo' | 'video'; el: HTMLImageElement | HTMLVideoElement; w: number; h: number; name: string; sample?: boolean; file?: File };
 type ExportOpts = { format: string; quality: number; size: string; fps: number };
@@ -101,7 +102,11 @@ export default function App() {
   const [welcome, setWelcome] = useState(true);
   const [installOpen, setInstallOpen] = useState(false);
   const [collageOpen, setCollageOpen] = useState(false);
+  const [collageDraftId, setCollageDraftId] = useState<string | undefined>();
+  const [savedDrafts, setSavedDrafts] = useState<DraftSummary[]>([]);
   const canInstallIOS = isIOS && !isNative() && !isStandalone();
+
+  useEffect(() => { listDrafts().then(setSavedDrafts); }, [collageOpen]);
 
   const pipeRef = useRef<Pipeline | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -690,16 +695,6 @@ export default function App() {
   const isVideo = media?.type === 'video';
   const activePanel = isMobile ? tab : panel;
 
-  // A few eye-catching looks from different categories for the welcome screen.
-  const showcase = useMemo(() => {
-    const cats = ['film', 'moody', 'bw', 'y2k', 'flash', 'green'];
-    return cats.map((c) => RECIPES.find((r) => r.cat === c)).filter(Boolean) as Recipe[];
-  }, []);
-  useEffect(() => {
-    if (!welcome) return;
-    setVisibleThumbIds((cur) => showcase.every((r) => cur.has(r.id)) ? cur : new Set([...cur, ...showcase.map((r) => r.id)]));
-  }, [welcome, showcase]);
-
   // Quick filters strip on the phone editor: current category, selected look first.
   const quickLooks = useMemo(() => {
     const list = looks.slice(0, 14);
@@ -768,57 +763,35 @@ export default function App() {
       onDrop={(e) => { e.preventDefault(); setDragOver(false); openFile(e.dataTransfer.files?.[0]); }}
     >
       {welcome && (
-        <div className="welcome" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
-          <div className="welcome-glow" aria-hidden="true" />
-          <div className="welcome-brand">
-            <LogoMark size={isMobile ? 38 : 44} />
-            <Wordmark size={isMobile ? 24 : 28} />
-          </div>
-          <div className="welcome-collage" aria-hidden="true">
-            {showcase.map((r, i) => (
-              <figure key={r.id} className={'wc-card wc-' + i}>
-                {thumbs[r.id] ? <img src={thumbs[r.id]} alt="" /> : <span className="thumb-ph" />}
-                <figcaption>{r.name}</figcaption>
-              </figure>
-            ))}
-          </div>
-          <div className="welcome-copy">
+        <div className="dashboard" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
+          <header className="dashboard-head">
+            <div className="welcome-brand"><LogoMark size={isMobile ? 38 : 44} /><Wordmark size={isMobile ? 24 : 28} /></div>
+            <button type="button" className="dashboard-close" aria-label={t.close} onClick={() => setWelcome(false)}>×</button>
+          </header>
+          <section className="dashboard-hero">
             <span className="welcome-kicker">✦ {t.welcomeKicker}</span>
-            <h1 id="welcome-title">{t.welcomeTitle}</h1>
-            <p>{t.welcomeSub}</p>
-            <ul className="welcome-feats">
-              <li>🎞️ {t.welcomeF1}</li>
-              <li>🎬 {t.welcomeF2}</li>
-              <li>🔒 {t.welcomeF3}</li>
-            </ul>
-          </div>
-          <div className="welcome-collage-entry">
-            <button type="button" className="collage-card" onClick={() => { setWelcome(false); setCollageOpen(true); }}>
-              <span className="collage-card-star" aria-hidden="true">★</span>
-              <span className="collage-card-text"><b>{collageStrings(lang).title}</b><small>{collageStrings(lang).cardSub}</small></span>
-              <span aria-hidden="true">›</span>
-            </button>
-          </div>
-          <div className="welcome-actions">
-            <label className="welcome-cta">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6M4 20h16" /></svg>
-              {t.welcomeStart}
+            <h1 id="welcome-title">{t.welcomeTitle}</h1><p>{t.welcomeSub}</p>
+            <label className="welcome-cta dashboard-cta">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6M4 20h16" /></svg>
+              + {t.welcomeStart}
               <input type="file" accept="image/*,video/*,.heic,.heif,.mov,.m4v" onChange={(e) => { openFile(e.target.files?.[0]); e.target.value = ''; }} />
             </label>
-            {canInstallIOS && (
-              <button type="button" className="welcome-install" onClick={() => setInstallOpen(true)}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2.5" /><path d="M12 7v7M9 11l3 3 3-3" /></svg>
-                {t.installHelp}
+            <p className="dashboard-drop">{t.dropHere}</p>
+          </section>
+          <section className="dashboard-section">
+            <div className="dashboard-section-head"><div><span className="eyebrow">{collageStrings(lang).title}</span><h2>{collageStrings(lang).mine}</h2></div><button type="button" className="hx-link" onClick={() => { setCollageDraftId(undefined); setWelcome(false); setCollageOpen(true); }}>{t.seeAll} ›</button></div>
+            {savedDrafts.length ? <div className="dashboard-projects">{savedDrafts.slice(0, 6).map((d) => (
+              <button type="button" className="dashboard-project" key={d.id} onClick={() => { setCollageDraftId(d.id); setWelcome(false); setCollageOpen(true); }}>
+                <img src={d.thumb} alt="" /><span>{d.template === 'story' ? collageStrings(lang).storyTitle : d.template}</span>
               </button>
-            )}
-            <button type="button" className="welcome-demo" onClick={() => setWelcome(false)}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.2 6.3L20.5 10l-6.3 2.2L12 18.5l-2.2-6.3L3.5 10l6.3-1.7z" /></svg>
-              {t.welcomeDemo}
-            </button>
-          </div>
+            ))}</div> : <button type="button" className="dashboard-empty" onClick={() => { setCollageDraftId(undefined); setWelcome(false); setCollageOpen(true); }}><span className="dashboard-empty-icon">＋</span><span><b>{collageStrings(lang).title}</b><small>{collageStrings(lang).cardSub}</small></span><span aria-hidden="true">›</span></button>}
+          </section>
+          <section className="dashboard-footer"><div><span className="eyebrow">{t.savedToGallery}</span><p>{t.exportNote}</p></div>
+            <button type="button" className="collage-card" onClick={() => { setCollageDraftId(undefined); setWelcome(false); setCollageOpen(true); }}><span className="collage-card-star" aria-hidden="true">★</span><span className="collage-card-text"><b>{collageStrings(lang).title}</b><small>{collageStrings(lang).cardSub}</small></span><span aria-hidden="true">›</span></button>
+          </section>
+          {canInstallIOS && <button type="button" className="welcome-install" onClick={() => setInstallOpen(true)}>{t.installHelp}</button>}
         </div>
-      )}
-      {installOpen && (
+      )}\n      {installOpen && (
         <div className="install-wrap" onClick={() => setInstallOpen(false)}>
           <div className="install-sheet" role="dialog" aria-modal="true" aria-labelledby="install-title" onClick={(e) => e.stopPropagation()}>
             <span className="sheet-grip" aria-hidden="true" />
@@ -860,7 +833,7 @@ export default function App() {
       )}
       {collageOpen && (
         <Suspense fallback={<div className="col-busy"><span className="col-spinner" /></div>}>
-          <CollageApp lang={lang} appT={t} isMobile={isMobile} showToast={showToast} onClose={() => setCollageOpen(false)} />
+          <CollageApp key={collageDraftId || 'gallery'} lang={lang} appT={t} isMobile={isMobile} showToast={showToast} initialDraftId={collageDraftId} onClose={() => { setCollageOpen(false); setCollageDraftId(undefined); setWelcome(true); }} />
         </Suspense>
       )}
       <header className="top">
@@ -876,6 +849,9 @@ export default function App() {
           </div>
         )}
         <div className="top-actions">
+          <button type="button" className="icon-btn home-btn" aria-label={t.welcomeTitle} title={t.welcomeTitle} onClick={() => setWelcome(true)}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-7h-4v7H4a1 1 0 0 1-1-1z" /></svg>
+          </button>
           {isMobile && (
             <button type="button" className="icon-btn ghost" aria-label={t.tools} aria-expanded={moreOpen} onClick={() => setMoreOpen(true)}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" /></svg>
@@ -1059,15 +1035,19 @@ export default function App() {
           )}
           {isMobile && !tool && (
             <nav className="bottom-nav" aria-label={t.tools}>
-              <button type="button" className="nav-btn" onClick={() => setPage('filters')}>
+              <button type="button" className="nav-btn" aria-current={welcome ? 'page' : undefined} onClick={() => setWelcome(true)}>
+                <span className="nav-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-7h-4v7H4a1 1 0 0 1-1-1z" /></svg></span>
+                <span>{t.welcomeTitle}</span>
+              </button>
+              <button type="button" className="nav-btn" onClick={() => { setWelcome(false); setPage('filters'); }}>
                 <span className="nav-ico"><TabIcon id="looks" /></span>
                 <span>{t.navFilters}</span>
               </button>
-              <button type="button" className="nav-btn" onClick={() => setPage('edit')}>
+              <button type="button" className="nav-btn" onClick={() => { setWelcome(false); setPage('edit'); }}>
                 <span className="nav-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></svg></span>
                 <span>{t.navEdit}</span>
               </button>
-              <button type="button" className="nav-btn" onClick={() => setPage('upload')}>
+              <button type="button" className="nav-btn" onClick={() => { setWelcome(false); setPage('upload'); }}>
                 <span className="nav-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6M4 20h16" /></svg></span>
                 <span>{t.navUpload}</span>
               </button>
@@ -1088,13 +1068,16 @@ export default function App() {
                   <small>{page === 'filters' ? t.filtersHint : page === 'edit' ? t.editHint : t.upload}</small>
                 </div>
                 {page === 'filters' ? <span className="page-count">{looks.length}</span> : <span className="page-spacer" />}
+                <button type="button" className="page-back page-home" aria-label={t.welcomeTitle} title={t.welcomeTitle} onClick={() => { setPage(null); setWelcome(true); }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-7h-4v7H4a1 1 0 0 1-1-1z" /></svg>
+                </button>
               </header>
               {page === 'filters' && <div className="page-body filters-page">{library}</div>}
               {page === 'edit' && (
                 <div className="page-body">
                   <div className="tool-grid">
                     {PANELS.map((p) => (
-                      <button key={p} type="button" className="tool-card" data-panel={p} onClick={() => { setTool(p); setPage(null); }}>
+                      <button key={p} type="button" className={tool === p ? 'tool-card on' : 'tool-card'} data-panel={p} aria-pressed={tool === p} onClick={() => { setTool(p); setPage(null); }}>
                         <span className="tool-card-ico"><TabIcon id={p} /></span>
                         <span>{(t as any)[PANEL_KEY[p]]}</span>
                       </button>
