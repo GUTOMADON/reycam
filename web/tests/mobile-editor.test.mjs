@@ -89,6 +89,21 @@ try {
     await page.locator('.dashboard-close').click().catch(() => undefined);
     await page.waitForTimeout(150);
 
+    const navLayout = await page.locator('.bottom-nav').evaluate((nav) => {
+      const navRect = nav.getBoundingClientRect();
+      const safePadding = parseFloat(getComputedStyle(nav).paddingBottom);
+      const contentBottom = navRect.bottom - safePadding;
+      const iconRects = [...nav.querySelectorAll('.nav-ico')].map((icon) => icon.getBoundingClientRect());
+      return {
+        safePadding,
+        navBottom: navRect.bottom,
+        viewportBottom: window.innerHeight,
+        iconsInsideContent: iconRects.every((rect) => rect.top >= navRect.top && rect.bottom <= contentBottom)
+      };
+    });
+    check(navLayout.safePadding >= 24, `${width}px bottom navigation reserves room for the system bar`);
+    check(navLayout.navBottom <= navLayout.viewportBottom + 1 && navLayout.iconsInsideContent, `${width}px bottom navigation icons stay clear of the screen edge`);
+
     check(
       await page.evaluate(() => document.body.innerText.indexOf(String.fromCharCode(92) + 'n') < 0),
       `${width}px has no visible literal slash-n text`
