@@ -229,7 +229,7 @@
     "videoNoSound": "Exported without sound because this browser cannot encode audio.",
     "navFilters": "Filter",
     "navEdit": "Bearbeiten",
-    "navUpload": "Hochladen",
+    "navUpload": "Importieren",
     "done": "Fertig",
     "back": "Zurück",
     "pickPhoto": "Foto",
@@ -261,7 +261,8 @@
     "catLu": "LU",
     "featured": "Empfohlen",
     "quickAdjust": "Schnelleinstellungen",
-    "maskLoading": "Person wird erkannt…"
+    "maskLoading": "Person wird erkannt…",
+    "navHome": "Start"
   },
   "looks": {
     "original": "Keine Kamera, nur deine Bearbeitung",

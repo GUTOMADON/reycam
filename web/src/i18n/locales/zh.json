@@ -229,7 +229,7 @@
     "videoNoSound": "Exported without sound because this browser cannot encode audio.",
     "navFilters": "滤镜",
     "navEdit": "编辑",
-    "navUpload": "上传",
+    "navUpload": "导入",
     "done": "完成",
     "back": "返回",
     "pickPhoto": "照片",
@@ -261,7 +261,8 @@
     "catLu": "LU",
     "featured": "精选",
     "quickAdjust": "快速调整",
-    "maskLoading": "正在识别人物…"
+    "maskLoading": "正在识别人物…",
+    "navHome": "首页"
   },
   "looks": {
     "original": "不用相机，只有你的调整",

@@ -636,7 +636,7 @@ if (want('layout')) {
     const tabsScroll = await page.evaluate(() => { const tabs = document.querySelector('.m-cats'); return !!tabs && tabs.scrollWidth > tabs.clientWidth; });
     await page.locator('.m-cats button').last().scrollIntoViewIfNeeded();
     const scrolled = await page.evaluate(() => document.querySelector('.m-cats').scrollLeft > 0);
-    await page.locator('.page-back').click();
+    await page.locator('.page-back:not(.page-home)').click();
     await page.locator('.bottom-nav .nav-btn').nth(2).click();
     await page.locator('.tool-card[data-panel="light"]').click(); await settle(page);
     const before = await sample(page);

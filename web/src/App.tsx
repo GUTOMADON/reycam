@@ -849,7 +849,7 @@ export default function App() {
           </div>
         )}
         <div className="top-actions">
-          <button type="button" className="icon-btn home-btn" aria-label={t.welcomeTitle} title={t.welcomeTitle} onClick={() => setWelcome(true)}>
+          <button type="button" className="icon-btn home-btn" aria-label={t.navHome} title={t.navHome} onClick={() => setWelcome(true)}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-7h-4v7H4a1 1 0 0 1-1-1z" /></svg>
           </button>
           {isMobile && (
@@ -1037,7 +1037,7 @@ export default function App() {
             <nav className="bottom-nav" aria-label={t.tools}>
               <button type="button" className="nav-btn" aria-current={welcome ? 'page' : undefined} onClick={() => setWelcome(true)}>
                 <span className="nav-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-7h-4v7H4a1 1 0 0 1-1-1z" /></svg></span>
-                <span>{t.welcomeTitle}</span>
+                <span>{t.navHome}</span>
               </button>
               <button type="button" className="nav-btn" onClick={() => { setWelcome(false); setPage('filters'); }}>
                 <span className="nav-ico"><TabIcon id="looks" /></span>
@@ -1047,13 +1047,13 @@ export default function App() {
                 <span className="nav-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></svg></span>
                 <span>{t.navEdit}</span>
               </button>
-              <button type="button" className="nav-btn" onClick={() => { setWelcome(false); setPage('upload'); }}>
-                <span className="nav-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6M4 20h16" /></svg></span>
-                <span>{t.navUpload}</span>
-              </button>
               <button type="button" className="nav-btn nav-collage" onClick={() => setCollageOpen(true)}>
                 <span className="nav-ico"><span className="collage-card-star" aria-hidden="true">★</span></span>
                 <span>{collageStrings(lang).title}</span>
+              </button>
+              <button type="button" className="nav-btn" onClick={() => { setWelcome(false); setPage('upload'); }}>
+                <span className="nav-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6M4 20h16" /></svg></span>
+                <span>{t.navUpload}</span>
               </button>
             </nav>
           )}
@@ -1068,7 +1068,7 @@ export default function App() {
                   <small>{page === 'filters' ? t.filtersHint : page === 'edit' ? t.editHint : t.upload}</small>
                 </div>
                 {page === 'filters' ? <span className="page-count">{looks.length}</span> : <span className="page-spacer" />}
-                <button type="button" className="page-back page-home" aria-label={t.welcomeTitle} title={t.welcomeTitle} onClick={() => { setPage(null); setWelcome(true); }}>
+                <button type="button" className="page-back page-home" aria-label={t.navHome} title={t.navHome} onClick={() => { setPage(null); setWelcome(true); }}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-7h-4v7H4a1 1 0 0 1-1-1z" /></svg>
                 </button>
               </header>

@@ -4,9 +4,9 @@
 
 # ReyCam
 
-**Vintage cameras, film looks and pro edits for photos and videos, right in the browser.**
+**A private, browser-based creative studio for vintage photo and video editing, collage design, and social-ready Stories.**
 
-625 looks · 16 categories · GPU rendering with WebGL2 · Full resolution export · MP4 video with sound · Installable PWA · 6 languages
+649 recipes, including Original · 16 categories · 110 collage templates · Multi-photo Stories · WebGL2 rendering · Full-resolution export · Installable PWA · iOS and Android builds · 6 fully translated languages
 
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
@@ -27,36 +27,44 @@
 
 - [Highlights](#highlights)
 - [Screenshots](#screenshots)
+- [Collage studio](#collage)
 - [Looks](#looks)
 - [Architecture](#architecture)
 - [Getting started](#getting-started)
+- [Using ReyCam](#using-reycam)
+- [Supported media](#supported-media)
 - [Testing](#testing)
 - [API](#api)
 - [Privacy](#privacy)
 - [Project layout](#project-layout)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
 - [Roadmap](#roadmap)
 - [License](#license)
 
 ## Highlights
 
-- **On device and private.** Every pixel is processed on the GPU of the user's device. Photos and videos are never uploaded.
-- **625 looks in 16 categories** (every category has at least 39, Y2K has 50), including the new **Moody** category led by **Mirror Mood** (dark cinematic teal shadows with warm natural skin, fitted to a reference photo) and a **Black and White** category. Looks span film, Y2K, indie, flash, film simulations, low light, nature, yellow, green, wine and more. Each look has an intensity slider, and at 0% it matches the original.
+- **Two creative workflows.** Edit a single photo or video with camera-inspired looks and professional controls, or switch to **Collage** to build layered scrapbook artwork and multi-photo Stories.
+- **On device and private.** Photo and video looks use the device's GPU; collage compositions render locally on canvas. Photos and videos are never uploaded.
+- **649 look recipes, including Original, across 16 categories** (every category has at least 39, Y2K has 50), including the new **Moody** category led by **Mirror Mood** (dark cinematic teal shadows with warm natural skin, fitted to a reference photo) and a **Black and White** category. Looks span film, Y2K, indie, flash, film simulations, low light, nature, yellow, green, wine and more. Each look has an intensity slider, and at 0% it matches the original.
 - **Pro adjustments.** Light, parametric tone curve, color, 8 band HSL mixer, three way color grading, clarity, dehaze, sharpen, grain, bloom, light leaks, dust, chromatic shift, scanlines, glitch and lo fi pixels.
 - **Camera details.** 10 frames (instant, film strip, slide mount, half frame, 8mm, cinema bars), date stamp in 4 formats and 5 colors, VHS, camcorder and CCTV overlays, double exposure.
 - **"No date" everywhere.** A one tap option, plus a remembered setting for people who never want a date, even on looks that ship with one.
 - **Instant preview.** The preview redraws in the same frame as the slider moves, and drops resolution only while dragging on slow GPUs.
 - **Export.** JPEG, PNG or WebP at full resolution. MP4 (H.264 and AAC) processed frame by frame with WebCodecs, with a real time recorder fallback for older browsers.
 - **Favorites, presets and workflow.** Heart any look, save your own presets, copy and paste edits, undo and redo, and hold to compare.
-- **Automatic language.** Follows the phone or browser language, then a server hint, and can always be changed by hand. English, Portuguese, Spanish, Mandarin, Hindi and German are fully translated, and right to left layouts work for Arabic, Hebrew, Persian and Urdu.
+- **Automatic language.** Follows the phone or browser language, then an optional server hint, and can always be changed by hand. English, Portuguese, Spanish, Mandarin, Hindi and German are fully translated. Right-to-left layout is supported for Arabic, Hebrew, Persian and Urdu; untranslated interface text falls back to English.
 - **iPhone formats.** HEIC and HEIF photos open everywhere: Safari decodes them natively and other browsers convert them on the device to a full quality JPEG (with the photo's rotation). iPhone `.mov` videos open wherever the device can play HEVC, with a clear tip when it cannot.
-- **Built for phones.** A welcome screen, three big bottom buttons (Filters, Edit, Upload) that open full screen pages, a quick filters strip, one tap shortcuts, sliders docked under the photo, and support for iPhone notches and Android gesture bars.
+- **Built for phones.** A dedicated Home dashboard, a five-item bottom navigation (Home, Filters, Edit, Collage, Import), a quick-filter strip, shortcuts, tool sheets docked under the photo, safe-area spacing, and layouts designed for phone-sized screens. The Import action opens the device picker; it is not a share button.
 - **Installable PWA** with an offline app shell.
 
 ## Screenshots
 
+The screenshots below are checked-in captures of the application, not mockups. Some older editor and filter captures predate the current Home dashboard; use the screenshot command in [Testing](#testing) to regenerate them after intentional UI changes.
+
 ### Welcome screen
 
-The app opens on a home screen with a floating collage of looks, a short pitch and two buttons: **Choose photo or video** or **Try with a sample**. Tapping the ReyCam logo in the editor brings it back.
+The app opens on a Home dashboard with a prominent **Add image** action, recent on-device collage drafts, and links into the existing Collage workspace. The editor header and mobile navigation provide a way back to Home. Exporting remains in the editor header.
 
 <table>
 <tr>
@@ -67,7 +75,7 @@ The app opens on a home screen with a floating collage of looks, a short pitch a
 
 ### Phone app (iOS and Android)
 
-On phones the editor works like a native photo app: the photo gets the space, with three big buttons at the bottom (**Filters**, **Edit**, **Upload**). Each button opens its own full screen page. The home view also has a **Quick filters** strip and **shortcuts** (Auto, Light, Color, Crop, Frame, Date).
+On phones the editor gives most vertical space to the preview and keeps navigation in a five-button bar: **Home**, **Filters**, **Edit**, **Collage**, and **Import**. Filters and Edit open focused full-screen panels; Import opens photo, video and camera choices. The editor also has a **Quick filters** strip and shortcuts (Auto, Light, Color, Crop, Frame and Date). The Share/Export action is not duplicated in the bottom bar.
 
 <table>
 <tr>
@@ -95,7 +103,7 @@ On phones the editor works like a native photo app: the photo gets the space, wi
 
 ## Collage
 
-The **Collage** category (Portuguese: **Colagem**) turns a photo into a scrapbook or zine page: the person is cut out on the device, a photo treatment is applied, and the result is placed on a styled background with stickers and hand drawn doodles. Every element can be moved, pinched, rotated, recolored, duplicated, flipped, locked, reordered and deleted, and every color comes from named color slots that the Colors panel edits all at once.
+The **Collage** studio (Portuguese: **Colagem**) is a second, full-screen creative workflow alongside the photo and video editor. It turns one or more photos into scrapbook pages, zines, posters, and social-ready Stories. Subject cutouts and collage rendering run on the device; originals are not uploaded. The editor uses a layered document model, so photos, backgrounds, stickers, text, and drawings can be positioned, transformed, recolored, reordered, locked, duplicated, and removed independently.
 
 - **110 built in templates**, filtered by Stars, Booth, Paper, Doodle, Retro Desktop, Duo, Comic, Scrapbook, Halftone and Nature. Set 1: Star Confetti Booth, Candy Stripe Booth, Cherry Print, Ransom Letters, Red Star Overlay, Crayon Split Duo, Paper Stars Night, Sky Silhouette Split, Doodle Stars Print, Retro Desktop Dialog, System Warning 3D, Retro Paint Frame, Love Wall, Starburst Postcard, Chalk Outline Crew, Ribbon Swirl, Cobalt Duotone Pop and Zigzag Rays. Set 2: Head Bangers, Magazine Profile, Holo Star Frame, Fairy Chase, Forest Elf, Felt Quilt Day, Meet the Artist, Bed Diary, Pink Scribble, Blue Sticker Face, Sunburst Pop, Sketch Aura, Graffiti Night, Memory Halftone, Journal Spiky, Comic Burst, Pattern Patch, Neon Painted, Paint Window Swirl, Desktop Corner, Green Flash Stars, Lime Contact Strip, Eye Strips, Retro Desktop Stack, Blue Monitor Grid, Star Sticker Booth, Sun Doodles, Camera Screen Night, Star Crown, Ribbon Wave Red, Train Diary, Rock Star Poster, Torn Yellow Marker, Sun Rays Party, Couch Sticker Party, Scrapbook Bedroom, Blue Street Board and Blue Burst Zine. Templates take 1 to 5 photos; missing photos reuse the first one. Set 3 (57 to 110, in [`templates-set3.ts`](web/src/collage/templates-set3.ts)) adds party walls, booth strips and grids, film negatives, contact sheets, punched paper, dot and line ornaments, face mosaics, compact camera mockups, frosted glass and riso posters.
 - **Tools from set 3** ([`effects2.ts`](web/src/collage/effects2.ts)): photo slices (barcode strips, torn strip shuffle, pixel tiles, glass shards with glitter edges), light leak and prism, grunge paint panels, feature mosaic, dot matrix and line ornaments, punch outs (scattered stars and spirals, oval or star window panels), torn ink threshold patches, frosted glass shapes, crayon face doodles placed on each face, camera playback screen, compact camera mockup, color swatch card, rough white frames, film edge text, double exposure blend, RGB split glow, head portal (soft oval window with vignette), halftone ink strokes, zebra fur, stained glass, tile wall and grunge note backgrounds, and a riso print finish.
@@ -170,28 +178,47 @@ Add one entry to `LU_LOOKS` or `GU_LOOKS` in [`web/src/engine/recipes-lu.ts`](we
 
 ## Architecture
 
+ReyCam is a client-first TypeScript application with a small optional Python API. The browser or installed app owns media decoding, editing, rendering, and export. The API does not receive image or video files: it only serves the built frontend and provides locale suggestions and shared preset storage.
+
 ```mermaid
 flowchart LR
-  subgraph Browser["Browser or installed PWA (all media stays here)"]
-    UI["React UI<br/>App, Library, Panels"] -->|EditState| PIPE["Pipeline<br/>pipeline.ts"]
-    PIPE -->|uniforms| GL["GLRenderer<br/>WebGL2 shaders"]
-    GL -->|GPU canvas| PIPE
-    PIPE -->|"2D pass: leaks, dust,<br/>glitch, date, frames"| OUT["Preview canvas"]
-    PIPE --> EXP["Export<br/>JPEG / PNG / WebP"]
-    PIPE --> VID["videoExport.ts<br/>WebCodecs + mp4-muxer"]
-    UI <--> I18N["i18n<br/>6 languages + RTL"]
-    UI <--> LS[("localStorage<br/>favorites, presets,<br/>language, no date")]
-    SW["Service worker<br/>offline shell"]
+  subgraph Client["Browser, PWA, or Capacitor app (media stays on device)"]
+    UI["React application<br/>App, Library, Panels"] --> EDIT["Photo/video editor"]
+    UI --> COLLAGE["Collage studio<br/>lazy-loaded React module"]
+    EDIT --> PIPE["Editing pipeline<br/>pipeline.ts"]
+    PIPE --> GL["WebGL2 renderer<br/>GPU shaders"]
+    GL --> PIPE
+    PIPE --> TWO["Canvas 2D finishing<br/>effects, overlays, frames"]
+    TWO --> PREVIEW["Editor preview"]
+    TWO --> IMG["Photo export<br/>JPEG / PNG / WebP"]
+    TWO --> VIDEO["Video export<br/>WebCodecs + mp4-muxer<br/>or MediaRecorder"]
+    COLLAGE --> DOC["Layered collage document<br/>templates and Story layouts"]
+    DOC --> SEG["MediaPipe segmentation<br/>on-device WASM model"]
+    DOC --> CR["Canvas 2D collage renderer"]
+    CR --> CPREVIEW["Collage preview"]
+    CR --> CEXPORT["PNG / JPEG export"]
+    UI <--> I18N["Localization<br/>6 languages + RTL layouts"]
+    UI <--> LS[("localStorage<br/>preferences and favorites")]
+    DOC <--> IDB[("IndexedDB<br/>collage drafts and photos")]
+    SW["Service worker<br/>PWA app shell and assets"]
   end
-  subgraph Server["FastAPI server"]
-    STATIC["Static app<br/>web/dist"]
+  subgraph Backend["Optional FastAPI service"]
+    STATIC["Static frontend<br/>web/dist"]
     API["/api/health<br/>/api/presets<br/>/api/locale"]
-    DB[("SQLite")]
+    DB[("SQLite preset store")]
     API --> DB
   end
-  UI -- "presets sync, locale hint" --> API
-  Browser -- "loads app" --> STATIC
+  STATIC -- "serves app" --> UI
+  UI <-->|"preset sync and language hint"| API
 ```
+
+### Main components
+
+- **React application (`web/src/App.tsx`)** owns the app shell, editing state, media selection, editor controls, and navigation. The Collage studio is loaded on demand, keeping its editor code out of the initial application path.
+- **Photo and video engine (`web/src/engine/`)** combines data-driven look recipes with a WebGL2 shader pipeline for image adjustments. A Canvas 2D finishing stage composites effects, overlays, dates, and frames. The same pipeline serves preview and export, with output size as the primary difference.
+- **Collage engine (`web/src/collage/`)** represents a design as a document containing ordered layers and named palette slots. Template and Story data describe compositions; a Canvas 2D renderer draws previews and exports. MediaPipe's locally bundled segmentation model creates subject masks, which can be refined in the editor. Draft documents, their source photos, and masks are stored in IndexedDB.
+- **Platform and persistence** include browser storage for lightweight preferences and favorites, IndexedDB for collage drafts, the service worker for the PWA shell, and Capacitor for native iOS/Android packaging and gallery export.
+- **FastAPI backend (`server/`)** serves the compiled frontend in self-hosted deployments and exposes health, locale-hint, and preset endpoints. Presets are stored in SQLite; this API is optional for deployments that serve the frontend elsewhere. It is not a media-processing or media-upload service.
 
 ### Render pipeline
 
@@ -216,7 +243,23 @@ flowchart TD
 
 ## Getting started
 
-### Option 1: Python only (prebuilt app included)
+ReyCam has two deployment modes: the static web application can run without the Python API, while the optional API provides a shared preset store and a language hint. The public GitHub Pages deployment is static and does not provide the API-backed shared preset service.
+
+### Prerequisites
+
+- Node.js 20 or later and npm for frontend development and builds. The Pages workflow uses Node.js 22; the Docker image uses Node.js 20 for its build stage.
+- Python 3.9 or later and pip for the API (the Docker runtime uses Python 3.12).
+- A modern browser with WebGL2 for the photo/video editor. Collage subject cutout uses the locally bundled MediaPipe model and WASM runtime.
+- Docker Engine only if using the container instructions below.
+
+Clone the repository and enter its root before following the commands:
+
+```bash
+git clone https://github.com/GUTOMADON/reycam.git
+cd reycam
+```
+
+### Option 1: Python server (serves the prebuilt frontend when available)
 
 Requires Python 3.9 or newer.
 
@@ -226,7 +269,19 @@ pip install -r requirements.txt
 python -m uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-Open http://localhost:8000. Windows: double click `start.bat`. macOS or Linux: run `./start.sh`.
+Run these commands from the repository root. The API process serves `web/dist` when that directory exists; build it first if you want the Python process to serve the web UI:
+
+```bash
+cd web
+npm ci
+npm run build
+cd ..
+python -m uvicorn main:app --app-dir server --host 127.0.0.1 --port 8000
+```
+
+Open http://127.0.0.1:8000. The repository-root convenience scripts are `start.bat` on Windows and `./start.sh` on macOS/Linux; inspect them for their exact local setup behavior before using them.
+
+To run only the API while developing the frontend, start the API from the root with the same `uvicorn` command and use the Vite dev server in the next section. Vite proxies `/api` to `http://localhost:8000`.
 
 ### Option 2: Docker
 
@@ -244,7 +299,32 @@ cd web
 npm install
 npm run dev        # hot reload on http://localhost:5173, proxies /api to port 8000
 npm run build      # checks translations, type checks and writes web/dist
+npm run preview    # preview the production build locally
 ```
+
+The Pages workflow builds with `--base=/reycam/`. `web/index.html` uses Vite's `%BASE_URL%` placeholder for public icons, the manifest and the public font stylesheet; the application uses `import.meta.env.BASE_URL` for the service worker, sample image and segmentation assets. For another repository path, pass the matching base when building, for example `npm run build -- --base=/your-repository/`.
+
+### Environment variables
+
+The frontend has no required `.env` file. Its `/api` development proxy target is configured in `web/vite.config.ts` as `http://localhost:8000`. The backend reads:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `REYCAM_DB` | `server/reycam.db` | SQLite file used for shared presets. |
+| `REYCAM_DIST` | `web/dist` | Static frontend directory served by FastAPI when present. |
+
+The API also reads standard request headers (`Accept-Language` and supported CDN country headers) to suggest a language; no external geolocation service is called.
+
+### Docker
+
+From the repository root:
+
+```bash
+docker build -t reycam .
+docker run --rm -p 8000:8000 -v reycam-data:/data reycam
+```
+
+The named volume keeps the SQLite preset database at `/data/reycam.db` across container replacement. Open http://127.0.0.1:8000.
 
 ### Android app (APK)
 
@@ -281,6 +361,27 @@ To regenerate the icon and splash after changing the logo: `cd web && node scrip
 
 Phones need HTTPS for the gallery picker and file export (localhost is exempt on computers). Deploy the server behind HTTPS, or test with a tunnel such as `cloudflared tunnel --url http://localhost:8000`, then use **Add to Home Screen** (iOS Safari) or **Install app** (Android Chrome).
 
+## Using ReyCam
+
+1. Open the Home screen and choose **Add image** to select media. On desktop, image files can also be dropped onto the app.
+2. Choose a look from the filter gallery or use the quick-look strip. The selected look is highlighted; intensity and editor controls are available alongside the preview.
+3. Open **Edit** to choose a panel such as Light, Color, HSL, Crop, Frame, Stamp, Retouch or Layers. The Home button returns to the dashboard.
+4. Use **Collage** to open templates or Stories. Collage drafts autosave locally in IndexedDB and can be reopened from the Home dashboard or the Collage gallery on the same browser/device.
+5. Use **Export** in the header to choose output settings. Depending on the browser/platform, a file is downloaded, shared, or saved to the device gallery.
+
+The mobile bottom bar's **Import** action opens photo, video and camera input choices; it is not a share action. Sharing/export remains in the existing export flow to avoid duplicate actions. The website cannot enumerate images already saved into a phone's Photos/Gallery library, so it does not present those exports as an in-app photo library.
+
+## Supported media
+
+| Input | Import behavior | Export behavior |
+| --- | --- | --- |
+| JPEG, PNG, WebP | Open in the single-image editor; HEIC/HEIF is accepted and decoded natively where supported or converted on-device where possible. | JPEG, PNG or WebP at a selected output size/quality. |
+| HEIC/HEIF | Safari may decode natively; other supported browsers use the on-demand `heic-to` converter. Conversion is local to the device. | Export uses the selected JPEG/PNG/WebP format. |
+| MP4, MOV and other browser-decodable video | Open with playback controls. Actual codec support depends on the browser and device; unsupported HEVC/MOV media may not decode. | MP4 when WebCodecs is available, otherwise the MediaRecorder fallback where supported. |
+| Collage/Story photos | Imported into the collage document; cutout segmentation is performed locally. | PNG or JPEG. |
+
+The file picker advertises common image and video types, but container and codec support is ultimately determined by the platform decoder. The app does not upload source media to the API.
+
 ## Look lab
 
 `web/tests/lab/run.mjs` renders looks with the real pipeline in Chromium:
@@ -311,10 +412,17 @@ HEIC photos open in every browser: Safari decodes them natively and other browse
 | End to end | `cd web && npm run test:e2e` | Opening media (button, drag and drop, paste, JPEG, PNG, WebP, MP4, MOV, invalid file, HEIC), every look on a photo and a video, intensity, every panel and slider, undo and redo, presets, photo and video export checked with ffprobe, playback, "No date", automatic language, phone and desktop layouts, PWA, accessibility and console |
 | Date color | `cd web && node tests/date-color.test.mjs` | Reads the pixels of the date for every color in the preview, the photo export and the video export, on desktop, iPhone and Android profiles |
 | Screenshots | `cd web && node tests/screenshots.mjs` | Regenerates the images in `docs/screenshots` |
+| Collage filters | `cd web && npm run test:collage` | Recommended/alternate/no filter, changes, undo/redo and export-preview consistency |
+| Stories | `cd web && npm run test:story` | Story layout generation and browser export behavior |
+| Recipe diversity | `cd web && npm run test:library` | Category counts and rendered-look similarity checks; this is a catalog quality audit and can flag existing near-similar looks |
 
-The browser suites use Playwright with the installed Chrome (`CHANNEL=chrome`) and expect the server on `http://localhost:8010` (change it with `BASE`). Test media is generated with ffmpeg into `web/tests/fixtures`.
+The browser suites use Playwright with installed Google Chrome (`CHANNEL=chrome`) and a running app server. `tests/e2e.mjs` defaults to `http://localhost:8010`; the collage and Story suites default to Vite at `http://localhost:5173`. Set `BASE` to override a suite's default. Start the Vite server with `cd web && npm run dev -- --host 127.0.0.1 --port 5173`. The API suite requires the Python test dependencies from `server/requirements.txt` plus pytest. Fixtures are checked into `web/tests/fixtures`; do not replace them with user media.
+
+For a layout-focused E2E run against Vite, use `BASE=http://127.0.0.1:5173 ONLY=layout npm run test:e2e` (PowerShell: `$env:BASE='http://127.0.0.1:5173'; $env:ONLY='layout'; npm run test:e2e`). The E2E layout branch checks iPhone/Android profiles and desktop columns; the six reference widths in a manual viewport audit are 320, 375, 390, 430, 768 and 1366 pixels.
 
 ## API
+
+Run the API from the repository root with `python -m uvicorn main:app --app-dir server --host 127.0.0.1 --port 8000`, or from `server/` with `python -m uvicorn main:app --host 127.0.0.1 --port 8000`.
 
 | Method | Path | Purpose |
 | --- | --- | --- |
@@ -325,9 +433,18 @@ The browser suites use Playwright with the installed Chrome (`CHANNEL=chrome`) a
 
 Presets are stored in SQLite (`server/reycam.db`, change with `REYCAM_DB`). There are no user accounts yet, so one server holds one shared preset list. Add authentication or per device IDs before exposing it to many users.
 
+Quick health check:
+
+```bash
+curl http://127.0.0.1:8000/api/health
+```
+
+Expected response: `{"status":"ok","app":"ReyCam"}`. `/api/locale` returns a language suggestion from request headers; `/api/presets` reads the shared list and `PUT /api/presets` replaces it. The API validates the JSON shape, allows at most 500 presets and limits request bodies to 2 MB. GitHub Pages is static hosting, so its deployment does not expose these API routes or shared preset synchronization.
+
 ## Privacy
 
 - Photos and videos are processed locally and never sent to the server.
+- Collage drafts, source photos, and segmentation masks are saved in the browser's local IndexedDB storage so they can be reopened on the same device.
 - The server only stores presets (edit settings, no images) and reads request headers to suggest a language.
 - Favorites, language and the "No date" setting live in the browser's localStorage.
 
@@ -336,15 +453,36 @@ Presets are stored in SQLite (`server/reycam.db`, change with `REYCAM_DB`). Ther
 ```
 web/                    React + TypeScript + Vite app (PWA)
   src/engine/           WebGL2 renderer, pipeline, recipes, video exporter
+  src/collage/          templates, Story layouts, layer editor and 2D renderer
   src/components/       Library (looks, favorites, categories), panels, logo
   src/i18n/locales/     en, pt, es, zh, hi, de
-  public/               icons, manifest, service worker, fonts, sample photo
+  public/               icons, manifest, service worker, fonts.css, fonts, sample media and segmentation assets
   tests/                Playwright suites, i18n test, fixtures
   dist/                 prebuilt app served by the server
-server/                 FastAPI app, API tests
-docs/screenshots/       README images
+server/                 FastAPI app, SQLite preset storage and API tests
+docs/screenshots/       README screenshots
+.github/workflows/      GitHub Pages, Android APK and iOS IPA workflows
 Dockerfile
+start.bat / start.sh    Local convenience launch scripts
 ```
+
+## Troubleshooting
+
+- **Blank preview or WebGL error:** update the browser/graphics driver, enable hardware acceleration and confirm WebGL2 is available. Some remote/virtual desktops disable GPU contexts.
+- **A video will not open:** browser codec support varies. Try an H.264 MP4 if a MOV/HEVC file cannot decode; this is a platform decoder limitation rather than a server upload issue.
+- **HEIC conversion fails:** try Safari on Apple devices or convert the source to JPEG locally. HEIC conversion is performed on-device and depends on the browser/runtime.
+- **Collage cutout is unavailable:** allow the bundled WASM/model assets to load and use a browser with WebAssembly support. The collage editor can continue with non-segmented photos if segmentation is unavailable.
+- **Shared presets/API fail on GitHub Pages:** Pages serves the static frontend only. Run the FastAPI service and configure a deployment that serves `/api` if shared presets or server locale hints are required.
+- **Custom Pages path gives missing icons/fonts:** build with a base path matching the repository URL, e.g. `npm run build -- --base=/reycam/`. The Pages workflow sets this automatically from the repository name.
+- **Phone file picker/export does not appear:** use HTTPS or localhost and grant the browser's file/photo permissions. Native gallery saving depends on the platform and permissions; web browsers may download or open the share sheet instead.
+
+## Contributing
+
+1. Create a branch and keep changes scoped to one behavior or documentation area.
+2. Install web dependencies with `cd web && npm ci` and, when working on the API, install `server/requirements.txt` in a virtual environment.
+3. Before opening a pull request, run `npm run build`, the relevant browser suite(s), and `python -m pytest server` for API changes. Browser tests require the server specified in their suite documentation.
+4. Update translations in all supported locale bundles when adding interface strings; `npm run test:i18n` checks key coverage.
+5. For new looks, templates or Story styles, update their data sources and corresponding rendering/regression tests. Avoid adding screenshots or media unless they are required, licensed for the repository and reproducible.
 
 ## Roadmap
 
@@ -354,7 +492,6 @@ Dockerfile
 - Per device private presets and optional accounts
 - Social presets (Stories, Reels, feed) with safe area guides
 - Batch editing, local adjustments, point tone curve, live histogram
-- Native packaging with Capacitor for iOS and Android
 
 ## License
 

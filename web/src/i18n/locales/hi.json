@@ -229,7 +229,7 @@
     "videoNoSound": "Exported without sound because this browser cannot encode audio.",
     "navFilters": "फ़िल्टर",
     "navEdit": "संपादित करें",
-    "navUpload": "अपलोड",
+    "navUpload": "आयात",
     "done": "हो गया",
     "back": "वापस",
     "pickPhoto": "फ़ोटो",
@@ -261,7 +261,8 @@
     "catLu": "LU",
     "featured": "विशेष",
     "quickAdjust": "त्वरित समायोजन",
-    "maskLoading": "व्यक्ति को पहचाना जा रहा है…"
+    "maskLoading": "व्यक्ति को पहचाना जा रहा है…",
+    "navHome": "होम"
   },
   "looks": {
     "original": "कोई कैमरा नहीं, सिर्फ़ आपके एडिट",

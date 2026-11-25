@@ -228,7 +228,7 @@
   "videoNoSound": "Exported without sound because this browser cannot encode audio.",
   "navFilters": "Filters",
   "navEdit": "Edit",
-  "navUpload": "Upload",
+  "navUpload": "Import",
   "done": "Done",
   "back": "Back",
   "pickPhoto": "Photo",
@@ -260,5 +260,6 @@
   "catLu": "LU",
   "featured": "Featured",
   "quickAdjust": "Quick adjustments",
-  "maskLoading": "Finding the person…"
+  "maskLoading": "Finding the person…",
+  "navHome": "Home"
 }
