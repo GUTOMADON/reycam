@@ -1,4 +1,4 @@
-// Captures the README screenshots with the showcase photo. Server must run on BASE.
+// Captures the README screenshots with the dog-and-guinea-pigs test photo. Server must run on BASE.
 // Run with: node tests/screenshots.mjs
 import { chromium, devices } from 'playwright';
 import { mkdirSync } from 'node:fs';
@@ -9,7 +9,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = join(HERE, '..', '..', 'docs', 'screenshots');
 mkdirSync(OUT, { recursive: true });
 const BASE = process.env.BASE || 'http://localhost:8010';
-const PHOTO = join(HERE, 'fixtures', 'showcase.jpg');
+const PHOTO = join(HERE, '..', '..', 'docs', 'screenshots', 'sample-photo.png');
 const browser = await chromium.launch({ channel: process.env.CHANNEL || 'chrome', headless: true });
 const wait = (p, ms = 400) => p.waitForTimeout(ms);
 
@@ -20,10 +20,17 @@ async function open(opts) {
   await page.evaluate(() => { localStorage.clear(); localStorage.setItem('reycam.lang.v3', 'en'); });
   await page.reload();
   await page.waitForFunction(() => document.querySelector('canvas.preview')?.width > 10);
-  await page.setInputFiles('.top-actions input[type=file]', PHOTO);
+  if (opts.isMobile) {
+    await page.locator('.dashboard-close').click().catch(() => undefined);
+    await page.locator('.nav-btn').filter({ hasText: 'Import' }).click();
+    await page.locator('.upload-card.photo input').setInputFiles(PHOTO);
+    await page.waitForSelector('.page', { state: 'detached' });
+  } else {
+    await page.setInputFiles('.top-actions input[type=file]', PHOTO);
+  }
   await page.waitForFunction(() => document.querySelector('.file-chip, .stage') !== null);
-  await page.waitForFunction(() => document.querySelectorAll('.look-img img').length > 40, null, { timeout: 60000 }).catch(() => undefined);
-  await wait(page, 1200);
+  await page.waitForFunction(() => document.querySelectorAll('.look-img img').length > 8, null, { timeout: 20000 }).catch(() => undefined);
+  await wait(page, 600);
   return { ctx, page };
 }
 
@@ -58,7 +65,6 @@ async function open(opts) {
 // Phones
 for (const [name, dev] of [['iphone', devices['iPhone 13']], ['android', devices['Pixel 7']]]) {
   const { ctx, page } = await open({ ...dev, viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
-  await page.locator('.mobile-body [data-look="golden-hour"] .look-btn').click(); await wait(page);
   await page.screenshot({ path: join(OUT, `mobile-${name}.png`) });
   await ctx.close();
 }

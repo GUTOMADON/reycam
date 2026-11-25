@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FIX = join(HERE, 'fixtures');
+const DOG_SAMPLE = join(HERE, '..', '..', 'docs', 'screenshots', 'sample-photo.png');
 const BASE = process.env.BASE || 'http://127.0.0.1:5173';
 const WIDTHS = [360, 390, 430];
 const LOOKS = ['lu-cry', 'lu-lazuli', 'lu-pop', 'lu-amora', 'lu-pitaya', 'lu-goiaba', 'lu-melancia', 'lu-morango', 'lu-framboesa'];
@@ -202,12 +203,12 @@ try {
   await page.waitForSelector('canvas.preview');
   await page.locator('.dashboard-close').click().catch(() => undefined);
 
-  const photoBytes = readFileSync(join(FIX, 'photo.jpg'));
+  const photoBytes = readFileSync(DOG_SAMPLE);
   const portraitBytes = readFileSync(join(FIX, 'mirror-original.jpg'));
   const dimPortrait = await sharp(portraitBytes).modulate({ brightness: 0.32 }).jpeg().toBuffer();
-  for (const [name, buffer] of [['bright scene', photoBytes], ['portrait with skin', portraitBytes], ['dark portrait', dimPortrait]]) {
+  for (const [name, buffer] of [['dog sample', photoBytes], ['portrait with skin', portraitBytes], ['dark portrait', dimPortrait]]) {
     await page.locator('.nav-btn').filter({ hasText: 'Importar' }).tap();
-    await page.locator('.upload-card.photo input').setInputFiles({ name: 'mobile-fixture.jpg', mimeType: 'image/jpeg', buffer });
+    await page.locator('.upload-card.photo input').setInputFiles({ name: 'dog-sample.png', mimeType: 'image/png', buffer });
     await page.waitForSelector('.page', { state: 'detached' });
     await page.waitForTimeout(180);
     await openFilters(page, 'all');
