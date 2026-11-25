@@ -1,7 +1,7 @@
 import type { QuickAdj, Recipe } from './types';
 
 /**
- * LU looks (18, category "lu") and Gu looks (6, featured first in "indie").
+ * LU looks (24, category "lu") and Gu looks (6, featured first in "indie").
  *
  * Every look is data: the same keys as the other ReyCam looks plus the LU stages
  * (gmap, poster, thresh, halftone, flash, glitter, flares, flashShadow...). Values
@@ -69,6 +69,47 @@ export const LU_LOOKS: Recipe[] = [
     gmap: [[90, 26, 160], [240, 60, 200], [255, 205, 235]], gmapAlts: [[[60, 20, 140], [255, 90, 160], [255, 220, 240]], [[30, 30, 120], [240, 60, 200], [255, 240, 200]]],
     gmapMix: 100, contrast: 30, halftone: 6, htMix: 60, grain: 25,
     quick: [q('dots', { halftone: 4 }), choice('palette', ['magenta', 'pinkPop', 'violet'])]
+  },
+  { id: 'lu-amora', name: 'Lu Amora', cat: 'lu', desc: 'Blue violet night film with magenta skin, lifted blacks and fine grain',
+    gmap: [[23, 31, 78], [91, 67, 137], [183, 91, 151], [238, 161, 190]], gmapMix: 76,
+    tint: 16, contrast: -22, shadows: 14, blacks: 18, fade: 12, saturation: -8,
+    grain: 34, grainSize: 3, grainChroma: 18,
+    quick: [GRAIN(35), q('fade', { fade: 24 }), q('contrast', { contrast: 28 })]
+  },
+  { id: 'lu-pitaya', name: 'Lu Pitaya', cat: 'lu', desc: 'High contrast solarized gradient from violet and magenta to mint cream',
+    gmap: [[42, 18, 83], [177, 27, 128], [226, 59, 157], [90, 170, 111], [190, 225, 175]],
+    gmapAlts: [
+      [[48, 14, 85], [191, 24, 132], [240, 76, 158], [106, 183, 117], [245, 226, 183]],
+      [[37, 14, 72], [150, 25, 137], [229, 77, 161], [94, 190, 127], [224, 235, 190]],
+      [[53, 24, 94], [182, 34, 138], [235, 93, 164], [126, 190, 139], [243, 232, 198]]
+    ],
+    gmapMix: 100, poster: 5, contrast: 28, saturation: 8, grain: 8,
+    quick: [choice('palette', ['pitaya', 'lima', 'menta', 'creme']), q('contrast', { contrast: 26 }), GRAIN(18)]
+  },
+  { id: 'lu-goiaba', name: 'Lu Goiaba', cat: 'lu', desc: 'Soft faded gradient of navy, mauve, mint and pale cyan',
+    gmap: [[17, 34, 75], [79, 91, 132], [166, 119, 153], [163, 211, 187], [199, 231, 218]],
+    gmapMix: 60, saturation: -18, contrast: -8, fade: 16, grain: 8,
+    quick: [q('mix', { gmapMix: 40 }), GRAIN(16), q('fade', { fade: 22 })]
+  },
+  { id: 'lu-melancia', name: 'Lu Melancia', cat: 'lu', desc: 'Petrol shadows, carmine midtones and peach cream highlights',
+    gmap: [[18, 57, 67], [174, 39, 61], [213, 91, 91], [249, 211, 179]],
+    gmapAlts: [
+      [[14, 50, 64], [164, 34, 69], [207, 79, 101], [246, 205, 174]],
+      [[23, 64, 69], [187, 42, 58], [220, 98, 83], [252, 218, 188]]
+    ],
+    gmapMix: 100, contrast: 24, saturation: 6, grain: 8,
+    quick: [choice('palette', ['melancia', 'carmim', 'pessego']), q('contrast', { contrast: 24 })]
+  },
+  { id: 'lu-morango', name: 'Lu Morango', cat: 'lu', desc: 'Deep red darkroom monochrome with warm peach highlights',
+    gmap: [[18, 4, 17], [126, 20, 39], [226, 87, 79], [255, 177, 139]],
+    gmapMix: 100, contrast: 42, blacks: -24, exposure: -4, saturation: -55, grain: 14, grainSize: 3,
+    quick: [q('contrast', { contrast: 24 }), GRAIN(20), q('mix', { gmapMix: 18 })]
+  },
+  { id: 'lu-framboesa', name: 'Lu Framboesa', cat: 'lu', desc: 'Cross processed split tone with rose highlights and teal shadows',
+    gmap: [[17, 58, 68], [76, 119, 119], [150, 143, 156], [230, 151, 181], [255, 218, 224]],
+    gmapMix: 54, contrast: -8, fade: 14, saturation: -10, grain: 8,
+    grade: { sh: [183, 24], mid: [184, 8], hi: [335, 18] },
+    quick: [q('mix', { gmapMix: 38 }), q('contrast', { contrast: 22 }), GRAIN(16)]
   },
   { id: 'lu-sunset', name: 'Lu Sunset', cat: 'lu', desc: 'Y2K pink and purple wash, milky highlights and soft glow',
     tint: 25, grade: { hi: [320, 25], sh: [280, 20] }, hsl: { magenta: [0, 25, 0], red: [0, 25, 0] },
@@ -182,7 +223,10 @@ export const QUICK_LABELS: Record<string, { en: string; pt: string }> = {
   indigo: { en: 'Indigo', pt: 'Índigo' }, black: { en: 'Black', pt: 'Preto' }, lapis: { en: 'Lapis', pt: 'Lápis-lazúli' }, cobalt: { en: 'Cobalt', pt: 'Cobalto' }, sky: { en: 'Sky', pt: 'Céu' },
   magenta: { en: 'Magenta', pt: 'Magenta' }, pinkPop: { en: 'Pink', pt: 'Rosa' }, violet: { en: 'Violet', pt: 'Violeta' }, teal: { en: 'Teal and gold', pt: 'Azul-petróleo e dourado' },
   blueGold: { en: 'Blue and gold', pt: 'Azul e dourado' }, greenOrange: { en: 'Green and orange', pt: 'Verde e laranja' }, alien: { en: 'Alien', pt: 'Alien' }, ocean: { en: 'Ocean', pt: 'Oceano' }, fire: { en: 'Fire', pt: 'Fogo' },
-  redInk: { en: 'Red', pt: 'Vermelho' }, greenInk: { en: 'Green', pt: 'Verde' }
+  redInk: { en: 'Red', pt: 'Vermelho' }, greenInk: { en: 'Green', pt: 'Verde' },
+  pitaya: { en: 'Pitaya', pt: 'Pitaya' }, lima: { en: 'Lime', pt: 'Lima' }, menta: { en: 'Mint', pt: 'Menta' }, creme: { en: 'Cream', pt: 'Creme' },
+  melancia: { en: 'Watermelon', pt: 'Melancia' }, carmim: { en: 'Carmine', pt: 'Carmim' }, pessego: { en: 'Peach', pt: 'Pêssego' },
+  mix: { en: 'Mix', pt: 'Mistura' }
 };
 
-export const quickLabel = (lang: string, id: string) => (lang === 'pt' ? QUICK_LABELS[id]?.pt : QUICK_LABELS[id]?.en) ?? id;
+export const quickLabel = (lang: string, id: string) => (lang.startsWith('pt') ? QUICK_LABELS[id]?.pt : QUICK_LABELS[id]?.en) ?? id;

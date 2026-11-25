@@ -122,7 +122,7 @@ export class Pipeline {
     const frame: FrameId = edit.frame === 'auto' ? ((lookOn && recipe.frame) || 'none') : edit.frame;
     const g = this.geometry(inp.srcW, inp.srcH, edit, frame, inp.maxSize);
     const P = effectiveParams(recipe, edit, inp.plain);
-    if (inp.newFrame) this.gl.setSource(inp.source, true);
+    this.gl.setSource(inp.source, inp.newFrame);
     if (this.overlaySrc) {
       const key = g.w + 'x' + g.h;
       if (key !== this.overlayKey) {

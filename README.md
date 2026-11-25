@@ -6,7 +6,7 @@
 
 **A private, browser-based creative studio for vintage photo and video editing, collage design, and social-ready Stories.**
 
-649 recipes, including Original · 16 categories · 110 collage templates · Multi-photo Stories · WebGL2 rendering · Full-resolution export · Installable PWA · iOS and Android builds · 6 fully translated languages
+655 recipes, including Original · 16 categories · 110 collage templates · Multi-photo Stories · WebGL2 rendering · Full-resolution export · Installable PWA · iOS and Android builds · 6 fully translated languages
 
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
@@ -46,7 +46,7 @@
 
 - **Two creative workflows.** Edit a single photo or video with camera-inspired looks and professional controls, or switch to **Collage** to build layered scrapbook artwork and multi-photo Stories.
 - **On device and private.** Photo and video looks use the device's GPU; collage compositions render locally on canvas. Photos and videos are never uploaded.
-- **649 look recipes, including Original, across 16 categories** (every category has at least 39, Y2K has 50), including the new **Moody** category led by **Mirror Mood** (dark cinematic teal shadows with warm natural skin, fitted to a reference photo) and a **Black and White** category. Looks span film, Y2K, indie, flash, film simulations, low light, nature, yellow, green, wine and more. Each look has an intensity slider, and at 0% it matches the original.
+- **655 look recipes, including Original, across 16 categories**, including the **Moody** category led by **Mirror Mood** (dark cinematic teal shadows with warm natural skin, fitted to a reference photo) and a **Black and White** category. Looks span film, Y2K, indie, flash, film simulations, low light, nature, yellow, green, wine and more. Each look has an intensity slider, and at 0% it matches the original.
 - **Pro adjustments.** Light, parametric tone curve, color, 8 band HSL mixer, three way color grading, clarity, dehaze, sharpen, grain, bloom, light leaks, dust, chromatic shift, scanlines, glitch and lo fi pixels.
 - **Camera details.** 10 frames (instant, film strip, slide mount, half frame, 8mm, cinema bars), date stamp in 4 formats and 5 colors, VHS, camcorder and CCTV overlays, double exposure.
 - **"No date" everywhere.** A one tap option, plus a remembered setting for people who never want a date, even on looks that ship with one.
@@ -55,7 +55,7 @@
 - **Favorites, presets and workflow.** Heart any look, save your own presets, copy and paste edits, undo and redo, and hold to compare.
 - **Automatic language.** Follows the phone or browser language, then an optional server hint, and can always be changed by hand. English, Portuguese, Spanish, Mandarin, Hindi and German are fully translated. Right-to-left layout is supported for Arabic, Hebrew, Persian and Urdu; untranslated interface text falls back to English.
 - **iPhone formats.** HEIC and HEIF photos open everywhere: Safari decodes them natively and other browsers convert them on the device to a full quality JPEG (with the photo's rotation). iPhone `.mov` videos open wherever the device can play HEVC, with a clear tip when it cannot.
-- **Built for phones.** A dedicated Home dashboard, a five-item bottom navigation (Home, Filters, Edit, Collage, Import), a quick-filter strip, shortcuts, tool sheets docked under the photo, safe-area spacing, and layouts designed for phone-sized screens. The Import action opens the device picker; it is not a share button.
+- **Built for phones.** A dedicated Home dashboard, a five-item bottom navigation (Home, Filters, Edit, Collage, Import), a quick-filter strip, shortcuts, one-column filter adjustments, separate undo/redo/compare actions, a full-screen photo preview, tool sheets docked under the photo, safe-area spacing, and layouts designed for phone-sized screens. The Import action opens the device picker; it is not a share button.
 - **Installable PWA** with an offline app shell.
 
 ## Screenshots
@@ -170,7 +170,7 @@ Look names are original. Several looks are inspired by classic film stocks and p
 
 ### LU and Gu filters
 
-The **LU** category has 18 looks whose names start with "Lu" (Lu Haze, Lu Flash and Lu Glitter first, with a star badge), and the **Indie** category starts with six "Gu" looks (lightning badge): Gu Candle, Gu Soirée, Gu Amber, Gu Bronze, Gu Ember and Gu Dusk. They use the same data driven engine as every other look, with extra GPU stages (gradient map, posterize, threshold with dithering, halftone, print streaks and specks, flash falloff centered on the head, skin protection, colored and shadow weighted grain) and person mask effects drawn after the GPU pass (glitter only on the background, star flares, synthetic flash shadow; without a mask they fall back to the whole image at lower strength). Each look has quick adjustments under the intensity slider. Grain is generated per pixel at output resolution and changes every frame on video. The looks are evaluated directly on the GPU at full precision, so no baked LUT files are needed.
+The **LU** category has 24 looks whose names start with "Lu" (Lu Haze, Lu Flash and Lu Glitter first, with a star badge), including **Lu Amora, Lu Pitaya, Lu Goiaba, Lu Melancia, Lu Morango and Lu Framboesa**. The **Indie** category starts with six "Gu" looks (lightning badge): Gu Candle, Gu Soirée, Gu Amber, Gu Bronze, Gu Ember and Gu Dusk. They use the same data driven engine as every other look, with extra GPU stages (gradient map, posterize, threshold with dithering, halftone, print streaks and specks, flash falloff centered on the head, skin protection, colored and shadow weighted grain) and person mask effects drawn after the GPU pass (glitter only on the background, star flares, synthetic flash shadow; without a mask they fall back to the whole image at lower strength). Each look has quick adjustments under the intensity slider. The six fruit looks use luminance gradient maps (with posterization on Lu Pitaya), mixed with the original where needed, plus GPU grain and color grading for their requested film palettes. Grain is generated per pixel at output resolution and changes every frame on video. The looks are evaluated directly on the GPU at full precision, so no baked LUT files are needed.
 
 #### Adding a Lu or Gu filter
 
@@ -328,7 +328,7 @@ The named volume keeps the SQLite preset database at `/data/reycam.db` across co
 
 ### Android app (APK)
 
-[`.github/workflows/android-apk.yml`](.github/workflows/android-apk.yml) builds **`ReyCam.apk`** on every push and attaches it to the latest **Android build** release. Open the APK on the phone, allow **Install unknown apps** for the browser or file manager, and install. Exports are saved to a **ReyCam** album in the gallery.
+Download the latest [**ReyCam.apk**](https://github.com/GUTOMADON/reycam/releases/latest/download/ReyCam.apk). The [Android workflow](.github/workflows/android-apk.yml) builds it on every push and publishes it as a GitHub Release. Open the APK on the phone, allow **Install unknown apps** for the browser or file manager, and install. Exports are saved to a **ReyCam** album in the gallery. CI builds use a debug signing key; Android may require uninstalling an older build before installing a newer one.
 
 ### iPhone profile (`.mobileconfig`)
 
@@ -410,6 +410,7 @@ HEIC photos open in every browser: Safari decodes them natively and other browse
 | Translations | `cd web && npm run test:i18n` | Fails if any UI string or look description is missing in pt, es, zh, hi or de |
 | API | `python -m pytest server` | Health, presets round trip, invalid payloads (400 and 413), `/api/locale` variants and country header |
 | End to end | `cd web && npm run test:e2e` | Opening media (button, drag and drop, paste, JPEG, PNG, WebP, MP4, MOV, invalid file, HEIC), every look on a photo and a video, intensity, every panel and slider, undo and redo, presets, photo and video export checked with ffprobe, playback, "No date", automatic language, phone and desktop layouts, PWA, accessibility and console |
+| Mobile editor | `cd web && npm run test:mobile` | 360/390/430 px touch layouts, quick-filter sliders and color chips, overflow, fullscreen close/escape/backdrop, and six new looks across light and portrait photos |
 | Date color | `cd web && node tests/date-color.test.mjs` | Reads the pixels of the date for every color in the preview, the photo export and the video export, on desktop, iPhone and Android profiles |
 | Screenshots | `cd web && node tests/screenshots.mjs` | Regenerates the images in `docs/screenshots` |
 | Collage filters | `cd web && npm run test:collage` | Recommended/alternate/no filter, changes, undo/redo and export-preview consistency |

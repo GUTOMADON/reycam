@@ -16,8 +16,9 @@ import { CropPanel, FramePanel, GradingPanel, HslPanel, LayerPanel, Pills, Retou
 import { CAT_KEY, Heart, Library, descOf } from './components/Library';
 import { listDrafts, type DraftSummary } from './collage/doc';
 
-type Media = { type: 'photo' | 'video'; el: HTMLImageElement | HTMLVideoElement; w: number; h: number; name: string; sample?: boolean; file?: File };
+type Media = { type: 'photo' | 'video'; el: HTMLImageElement | HTMLVideoElement | ImageBitmap; w: number; h: number; name: string; sample?: boolean; file?: File };
 type ExportOpts = { format: string; quality: number; size: string; fps: number };
+const isImageBitmap = (source: unknown): source is ImageBitmap => typeof ImageBitmap !== 'undefined' && source instanceof ImageBitmap;
 
 const PANELS = ['light', 'color', 'hsl', 'curve', 'grading', 'detail', 'effects', 'retouch', 'frame', 'crop', 'stamp', 'layer'];
 const FAV_KEY = 'reycam.favs.v1';
@@ -78,6 +79,7 @@ export default function App() {
   const [panel, setPanel] = useState('light');
   const [tab, setTab] = useState('looks');
   const [band, setBand] = useState('red');
+  const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [visibleThumbIds, setVisibleThumbIds] = useState<Set<string>>(new Set());
   const [comparing, setComparing] = useState(false);
@@ -110,8 +112,14 @@ export default function App() {
 
   const pipeRef = useRef<Pipeline | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fullscreenCanvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRef = useRef<Media | null>(null);
+  const previewBitmap = useRef<ImageBitmap | null>(null);
+  const thumbnailBitmap = useRef<ImageBitmap | null>(null);
+  const thumbnailCache = useRef(new Map<string, string>());
+  const importRequest = useRef(0);
+  const imageWorker = useRef<Worker | null>(null);
   const editRef = useRef(edit);
   const comparingRef = useRef(false);
   const exportingRef = useRef(false);
@@ -129,11 +137,18 @@ export default function App() {
   const interactiveUntil = useRef(0);
   const pendingFull = useRef(false);
   const lastCost = useRef(0);
-  const renderRef = useRef<() => void>(() => undefined);
 
   editRef.current = edit;
   mediaRef.current = media;
   comparingRef.current = comparing;
+
+  useEffect(() => () => {
+    imageWorker.current?.terminate();
+    previewBitmap.current?.close();
+    thumbnailBitmap.current?.close();
+    const current = mediaRef.current;
+    if (current?.type === 'photo' && isImageBitmap(current.el)) current.el.close();
+  }, []);
 
   const presetRecipes: Recipe[] = useMemo(
     () => presets.map((p) => ({ ...findRecipe(p.edit.camId), id: 'preset:' + p.id, name: p.name, cat: 'mine' as const, desc: findRecipe(p.edit.camId).name })),
@@ -156,14 +171,32 @@ export default function App() {
     const pipe = pipeRef.current, m = mediaRef.current;
     if (!pipe || !m) return;
     const isVideo = m.type === 'video';
+    const usePreviewSource = out === canvasRef.current || maxSize <= 200;
+    const source = !isVideo && usePreviewSource
+      ? (maxSize <= 200 ? thumbnailBitmap.current || previewBitmap.current : previewBitmap.current) || m.el
+      : m.el;
     const newFrame = isVideo || uploadedVersion.current !== mediaVersion.current;
     uploadedVersion.current = mediaVersion.current;
     const eff: EditState = noDateRef.current ? { ...e, stamp: 'off' } : e;
     // Preview only: keep the date at least about 9 css px tall on screen. Exports pass no minimum.
     let minStampPx = 0;
     if (out === canvasRef.current && out.width) { const shown = parseFloat(out.style.width) || out.width; minStampPx = 9 * (out.width / shown); }
-    pipe.render({ source: m.el, srcW: m.w, srcH: m.h, recipe: r, edit: eff, isVideo, time: isVideo ? (m.el as HTMLVideoElement).currentTime : 0, plain, maxSize, newFrame, minStampPx }, out);
+    pipe.render({ source, srcW: m.w, srcH: m.h, recipe: r, edit: eff, isVideo, time: isVideo ? (m.el as HTMLVideoElement).currentTime : 0, plain, maxSize, newFrame, minStampPx }, out);
   }, []);
+
+  useEffect(() => {
+    if (!fullscreenOpen || !media || !fullscreenCanvasRef.current) return;
+    renderTo(fullscreenCanvasRef.current, Math.min(isMobile ? 2048 : 3000, Math.max(media.w, media.h)), recipe, edit, false);
+  }, [fullscreenOpen, media, isMobile, recipe, edit, renderTo]);
+
+  useEffect(() => {
+    if (!fullscreenOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setFullscreenOpen(false);
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [fullscreenOpen]);
 
   /** Fit the preview canvas into the stage using the cached stage size (no layout reads). */
   const fitPreview = useCallback(() => {
@@ -186,15 +219,17 @@ export default function App() {
       ? Math.min(1280, Math.max(m.w, m.h), Math.round(displaySize * pixelRatio))
       : Math.min(isMobile ? 1200 : 2000, Math.max(m.w, m.h), Math.round(displaySize * pixelRatio));
     // While a slider is moving on a slow GPU, render smaller and sharpen up when it stops.
-    const reduced = m.type === 'photo' && performance.now() < interactiveUntil.current && lastCost.current > 14;
-    if (reduced) { size = Math.max(640, Math.round(size * 0.6)); pendingFull.current = true; }
+    const reduced = m.type === 'photo' && performance.now() < interactiveUntil.current && (isMobile || lastCost.current > 14);
+    if (reduced) {
+      const interactionScale = lastCost.current > 30 ? 0.1 : 0.25;
+      size = Math.max(120, Math.round(size * interactionScale));
+      pendingFull.current = true;
+    }
     const t0 = performance.now();
     renderTo(c, size, findRecipe(editRef.current.camId), editRef.current, comparingRef.current);
     if (!reduced) { lastCost.current = performance.now() - t0; pendingFull.current = false; }
     fitPreview();
   }, [renderTo, isMobile, fitPreview]);
-  renderRef.current = renderPreview;
-
   // Track the stage size without forcing layout on every frame
   useEffect(() => {
     const stage = canvasRef.current?.parentElement;
@@ -259,7 +294,12 @@ export default function App() {
 
   useEffect(() => { dirty.current = true; }, [comparing, media, hasOverlay, isMobile]);
 
-  // Thumbnails for every look, rebuilt when the media or presets change
+  useEffect(() => {
+    thumbnailCache.current.clear();
+    setThumbs({});
+  }, [media]);
+
+  // Render visible thumbnails in short frame-budgeted batches and reuse them for this photo.
   useEffect(() => {
     if (!media || !pipeRef.current) return;
     let cancelled = false;
@@ -271,24 +311,29 @@ export default function App() {
     presets.forEach((p) => {
       if (visibleThumbIds.has('preset:' + p.id)) list.push({ id: 'preset:' + p.id, r: findRecipe(p.edit.camId), e: { ...p.edit, aspect: '1:1', frame: 'none', stamp: 'off' } });
     });
+    const cache = thumbnailCache.current;
+    const pending = list.filter((item) => !cache.has(item.id));
     const c = document.createElement('canvas');
-    const acc: Record<string, string> = {};
     let i = 0;
+    let raf = 0;
     const step = () => {
       if (cancelled) return;
       if (exportingRef.current) { window.setTimeout(step, 300); return; }
+      if (performance.now() < interactiveUntil.current) { raf = requestAnimationFrame(step); return; }
       const t0 = performance.now();
-      while (i < list.length && performance.now() - t0 < 10) {
-        renderTo(c, 200, list[i].r, list[i].e, false);
-        acc[list[i].id] = c.toDataURL('image/jpeg', 0.82);
+      while (i < pending.length && performance.now() - t0 < 6) {
+        renderTo(c, 180, pending[i].r, pending[i].e, false);
+        cache.set(pending[i].id, c.toDataURL('image/jpeg', 0.82));
         i++;
       }
-      if (i >= list.length || i % 12 < 3) setThumbs({ ...acc });
-      if (i < list.length) window.setTimeout(step, 24);
-      else { setThumbs({ ...acc }); dirty.current = true; }
+      if (i < pending.length) raf = requestAnimationFrame(step);
+      else {
+        setThumbs(Object.fromEntries(cache));
+        dirty.current = true;
+      }
     };
-    const id = window.setTimeout(step, 60);
-    return () => { cancelled = true; window.clearTimeout(id); };
+    if (pending.length) raf = requestAnimationFrame(step);
+    return () => { cancelled = true; cancelAnimationFrame(raf); };
   }, [media, presets, renderTo, visibleThumbIds]);
 
   // Edits with undo history
@@ -303,8 +348,7 @@ export default function App() {
     h.last = now;
     editRef.current = next;
     interactiveUntil.current = performance.now() + 200;
-    if (exportingRef.current) dirty.current = true;
-    else { dirty.current = false; renderRef.current(); }
+    dirty.current = true;
     setEditState(next);
   }, []);
   const setEdit = useCallback((patch: Partial<EditState>) => {
@@ -369,16 +413,58 @@ export default function App() {
   };
 
   // Opening files
-  const openFile = useCallback((f: File | undefined | null) => {
-    if (!f) return;
-    const url = URL.createObjectURL(f);
-    urls.current.push(url);
-    while (urls.current.length > 3) URL.revokeObjectURL(urls.current.shift()!);
+  const openFile = useCallback((input: File | undefined | null) => {
+    if (!input) return;
+    const f = input;
+    const requestId = ++importRequest.current;
+    imageWorker.current?.terminate();
+    imageWorker.current = null;
+    const createMediaUrl = (blob: Blob) => {
+      const url = URL.createObjectURL(blob);
+      urls.current.push(url);
+      while (urls.current.length > 3) URL.revokeObjectURL(urls.current.shift()!);
+      return url;
+    };
+    const makeScaledBitmap = async (source: HTMLImageElement | ImageBitmap, width: number, height: number, maxEdge: number) => {
+      const scale = Math.min(1, maxEdge / Math.max(width, height));
+      if (scale >= 1) return null;
+      return createImageBitmap(source, {
+        resizeWidth: Math.max(1, Math.round(width * scale)),
+        resizeHeight: Math.max(1, Math.round(height * scale)),
+        resizeQuality: 'high'
+      });
+    };
+    const publishPhoto = (source: HTMLImageElement | ImageBitmap, width: number, height: number, preview: ImageBitmap | null, thumbnail: ImageBitmap | null) => {
+      if (requestId !== importRequest.current) {
+        if (isImageBitmap(source)) source.close();
+        preview?.close();
+        thumbnail?.close();
+        return;
+      }
+      const current = mediaRef.current;
+      if (current?.type === 'photo' && isImageBitmap(current.el)) current.el.close();
+      previewBitmap.current?.close();
+      thumbnailBitmap.current?.close();
+      previewBitmap.current = preview;
+      thumbnailBitmap.current = thumbnail;
+      mediaVersion.current++;
+      setMedia({ type: 'photo', el: source, w: width, h: height, name: f.name, file: f });
+      setPlaying(false);
+      setTab('looks'); setPage(null); setWelcome(false);
+    };
     const isVideo = f.type.startsWith('video/') || /\.(mp4|mov|m4v|webm|mkv|3gp)$/i.test(f.name);
     if (isVideo) {
+      const url = createMediaUrl(f);
       const v = videoRef.current!;
       v.pause();
       v.onloadeddata = () => {
+        if (requestId !== importRequest.current) return;
+        const current = mediaRef.current;
+        if (current?.type === 'photo' && isImageBitmap(current.el)) current.el.close();
+        previewBitmap.current?.close();
+        thumbnailBitmap.current?.close();
+        previewBitmap.current = null;
+        thumbnailBitmap.current = null;
         mediaVersion.current++;
         v.loop = true;
         userPlaying.current = false;
@@ -394,27 +480,96 @@ export default function App() {
       v.load();
       return;
     }
+
+    const looksHeic = /hei[cf]/i.test(f.type + f.name);
+    if (typeof createImageBitmap === 'function') {
+      const maxPreviewEdge = Math.min(isMobile ? 1200 : 2000, Math.round(Math.max(stageBox.current.w, stageBox.current.h) * Math.min(window.devicePixelRatio || 1, 2)));
+      let worker: Worker;
+      try {
+        worker = new Worker(new URL('./engine/imageWorker.ts', import.meta.url), { type: 'module' });
+      } catch {
+        if (!looksHeic) showToast(t.previewFallback);
+        loadImageElement();
+        return;
+      }
+      imageWorker.current = worker;
+      worker.onmessage = (event: MessageEvent<{ id: number; full?: ImageBitmap; preview?: ImageBitmap | null; thumbnail?: ImageBitmap | null; error?: true }>) => {
+        const result = event.data;
+        worker.terminate();
+        if (imageWorker.current === worker) imageWorker.current = null;
+        if (requestId !== importRequest.current || result.id !== requestId) {
+          result.full?.close();
+          result.preview?.close();
+          result.thumbnail?.close();
+          return;
+        }
+        if (result.error || !result.full) {
+          if (!looksHeic) showToast(t.previewFallback);
+          loadImageElement();
+          return;
+        }
+        publishPhoto(result.full, result.full.width, result.full.height, result.preview || null, result.thumbnail || null);
+      };
+      worker.onerror = () => {
+        worker.terminate();
+        if (imageWorker.current === worker) imageWorker.current = null;
+        if (requestId === importRequest.current) {
+          if (!looksHeic) showToast(t.previewFallback);
+          loadImageElement();
+        }
+      };
+      try {
+        worker.postMessage({ id: requestId, file: f, maxPreviewEdge });
+      } catch {
+        worker.terminate();
+        if (imageWorker.current === worker) imageWorker.current = null;
+        if (!looksHeic) showToast(t.previewFallback);
+        loadImageElement();
+      }
+      return;
+    }
+
+    loadImageElement();
+
+    function loadImageElement() {
+      if (requestId !== importRequest.current) return;
+      const url = createMediaUrl(f);
     const img = new Image();
     img.decoding = 'async';
-    img.onload = () => {
-      mediaVersion.current++;
-      setMedia({ type: 'photo', el: img, w: img.naturalWidth, h: img.naturalHeight, name: f.name, file: f });
-      setPlaying(false);
-      setTab('looks'); setPage(null); setWelcome(false);
+      img.onload = async () => {
+        let preview: ImageBitmap | null = null;
+        let thumbnail: ImageBitmap | null = null;
+        const maxPreviewEdge = Math.min(isMobile ? 1200 : 2000, Math.round(Math.max(stageBox.current.w, stageBox.current.h) * Math.min(window.devicePixelRatio || 1, 2)));
+        if (typeof createImageBitmap === 'function') {
+          try {
+            preview = await makeScaledBitmap(img, img.naturalWidth, img.naturalHeight, maxPreviewEdge);
+            const thumbSource = preview || img;
+            thumbnail = await makeScaledBitmap(
+              thumbSource,
+              preview ? preview.width : img.naturalWidth,
+              preview ? preview.height : img.naturalHeight,
+              180
+            );
+          } catch {
+            showToast(t.previewFallback);
+          }
+        }
+        publishPhoto(img, img.naturalWidth, img.naturalHeight, preview, thumbnail);
     };
     // Safari opens HEIC by itself. Chrome, Firefox and Android do not, so the
     // photo is converted to a full quality JPEG on the device and opened again.
     // This happens silently: HEIC is always accepted and no message is shown.
     let attempt = 0;
     img.onerror = async () => {
+      if (requestId !== importRequest.current) return;
       attempt++;
       let heic: typeof import('heic-to');
       try { heic = await import('heic-to'); } catch { return; }
       const looksHeic = /hei[cf]/i.test(f.type + f.name) || await heic.isHeic(f).catch(() => false);
       if (!looksHeic) { if (attempt === 1) showToast(t.useMedia); return; }
       const show = (blob: Blob) => {
-        const u = URL.createObjectURL(blob);
-        urls.current.push(u);
+        if (requestId !== importRequest.current) return;
+        const u = createMediaUrl(blob);
         img.src = u;
       };
       if (attempt === 1) {
@@ -435,7 +590,8 @@ export default function App() {
       }
     };
     img.src = url;
-  }, [showToast, t]);
+    }
+  }, [showToast, t, isMobile]);
 
   useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
@@ -791,7 +947,8 @@ export default function App() {
           </section>
           {canInstallIOS && <button type="button" className="welcome-install" onClick={() => setInstallOpen(true)}>{t.installHelp}</button>}
         </div>
-      )}\n      {installOpen && (
+      )}
+      {installOpen && (
         <div className="install-wrap" onClick={() => setInstallOpen(false)}>
           <div className="install-sheet" role="dialog" aria-modal="true" aria-labelledby="install-title" onClick={(e) => e.stopPropagation()}>
             <span className="sheet-grip" aria-hidden="true" />
@@ -894,28 +1051,9 @@ export default function App() {
               )}
               {comparing && <span className="chip cream">{t.original}</span>}
             </div>
-            {isMobile && (
-              <div className="stage-tools">
-                <button type="button" className="float-btn" aria-label={t.undo} onClick={undo} disabled={!history.current.past.length}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M9 14L4 9l5-5" /><path d="M4 9h10a6 6 0 010 12h-3" /></svg>
-                </button>
-                <button type="button" className="float-btn" aria-label={t.redo} onClick={redo} disabled={!history.current.future.length}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M15 14l5-5-5-5" /><path d="M20 9H10a6 6 0 000 12h3" /></svg>
-                </button>
-                <button
-                  type="button"
-                  className={comparing ? 'float-btn on' : 'float-btn'}
-                  aria-label={t.compare}
-                  onPointerDown={() => setComparing(true)}
-                  onPointerUp={() => setComparing(false)}
-                  onPointerLeave={() => setComparing(false)}
-                  onPointerCancel={() => setComparing(false)}
-                  onContextMenu={(e) => e.preventDefault()}
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3" /><path d="M12 4v16" /></svg>
-                </button>
-              </div>
-            )}
+            <button type="button" className="stage-fullscreen" aria-label={t.fullscreen} title={t.fullscreen} disabled={!media} onClick={() => setFullscreenOpen(true)}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5M3 8l6-6M21 8l-6-6M3 16l6 6M21 16l-6 6" /></svg>
+            </button>
             {busy && (
               <div className="busy" role="status">
                 <span>{busy.label}{busy.pct ? ` ${busy.pct}%` : ''}</span>
@@ -925,6 +1063,31 @@ export default function App() {
             )}
             {dragOver && <div className="drop">{t.dropHere}</div>}
           </div>
+          {isMobile && (
+            <div className="mobile-history" role="group" aria-label={t.editHistory}>
+              <button type="button" className="history-btn" aria-label={t.undo} onClick={undo} disabled={!history.current.past.length}>
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M9 14L4 9l5-5" /><path d="M4 9h10a6 6 0 010 12h-3" /></svg>
+                <span>{t.undo}</span>
+              </button>
+              <button type="button" className="history-btn" aria-label={t.redo} onClick={redo} disabled={!history.current.future.length}>
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M15 14l5-5-5-5" /><path d="M20 9H10a6 6 0 000 12h3" /></svg>
+                <span>{t.redo}</span>
+              </button>
+              <button
+                type="button"
+                className={comparing ? 'history-btn on' : 'history-btn'}
+                aria-label={t.compare}
+                onPointerDown={() => setComparing(true)}
+                onPointerUp={() => setComparing(false)}
+                onPointerLeave={() => setComparing(false)}
+                onPointerCancel={() => setComparing(false)}
+                onContextMenu={(e) => e.preventDefault()}
+              >
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3" /><path d="M12 4v16" /></svg>
+                <span>{t.compareShort}</span>
+              </button>
+            </div>
+          )}
           {media?.sample && !isMobile && <p className="note center-note">{t.sampleNote}</p>}
           <div className="toolbar">
             {!isMobile && <>
@@ -972,15 +1135,15 @@ export default function App() {
                   const v = edit.quick?.[qa.id] ?? 0;
                   const setQ = (nv: number) => setEdit({ quick: { ...(edit.quick || {}), [qa.id]: nv } });
                   if (qa.kind === 'choice') return (
-                    <div key={qa.id} className="qa-chips"><span className="muted">{quickLabel(lang, qa.id)}</span>
+                    <div key={qa.id} className="qa-chips"><span className="qa-head"><span className="muted">{quickLabel(lang, qa.id)}</span></span>
                       {(qa.options || []).map((o, i) => <button key={o} type="button" className={v === i ? 'qa-chip on' : 'qa-chip'} onClick={() => setQ(i)}>{quickLabel(lang, o)}</button>)}
                     </div>
                   );
                   if (qa.kind === 'shuffle') return <button key={qa.id} type="button" className="qa-chip" onClick={() => setQ(v + 1)}>🎲 {quickLabel(lang, qa.id)}</button>;
                   return (
                     <label key={qa.id} className="qa-range">
-                      <span className="muted">{quickLabel(lang, qa.id)}</span>
-                      <input type="range" min={-100} max={100} value={v} onChange={(e) => setQ(Number(e.target.value))} onDoubleClick={() => setQ(0)} />
+                      <span className="qa-head"><span className="muted">{quickLabel(lang, qa.id)}</span><span className="qa-value">{v > 0 ? '+' : ''}{v}%</span></span>
+                      <input aria-label={quickLabel(lang, qa.id)} type="range" min={-100} max={100} value={v} onChange={(e) => setQ(Number(e.target.value))} onDoubleClick={() => setQ(0)} />
                     </label>
                   );
                 })}
@@ -1194,6 +1357,17 @@ export default function App() {
               <button type="submit" className="btn primary">{t.save}</button>
             </div>
           </form>
+        </div>
+      )}
+
+      {fullscreenOpen && (
+        <div className="fullscreen-view" role="dialog" aria-modal="true" aria-label={t.fullscreen} onClick={(event) => { if (event.target === event.currentTarget) setFullscreenOpen(false); }}>
+          <button type="button" className="fullscreen-close" aria-label={t.close} onClick={() => setFullscreenOpen(false)}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+          <div className="fullscreen-image-wrap" onClick={(event) => event.stopPropagation()}>
+            <canvas ref={fullscreenCanvasRef} className="fullscreen-image" aria-label={recipe.name} />
+          </div>
         </div>
       )}
 
